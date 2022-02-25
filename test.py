@@ -8,6 +8,7 @@ JSON_OUT = "meta.json"
 
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
 SVG_start = '\n<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
+#SVG_start = '<svg width="100%" height="100%" viewBox="0 0 5906 5906" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">'
 SVG_end = '</svg>'
 
 # to replace base use
@@ -113,8 +114,8 @@ if __name__ == "__main__":
     neck = svg_meta["neck"]["neck"]
     head = svg_meta["head"]["head"]
     eyes = svg_meta["eyes"]["void"]
-    hat = svg_meta["hats"]["swiss_cheese_plant"]
-    hat = svg_meta["hats"]["yellow_cake"]
+    hat = svg_meta["hats"]["extended"]
+    #hat = svg_meta["hats"]["yellow_cake"]
     ears = svg_meta["ears"]["ram"]
     mouth = svg_meta["mouths"]["simple"]
     mouth = svg_meta["mouths"]["warning_patch_fluid"]
@@ -135,6 +136,15 @@ if __name__ == "__main__":
         style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
         filename = OUTPUT_DIR + "test_" + str(i) + ".svg"
         make_svg(inner_svg, style, filename)
+
+    for x in svg_meta["hats"]:
+        inner_svg = neck + head +svg_meta["hats"][x] + mouth + ears + eyes
+        style = COLOUR_STYLE_START + COLOR_STYLE_DEFAULT + COLOUR_STYLE_END
+        filename = OUTPUT_DIR + "test_" + str(x) + ".svg"
+        make_svg(inner_svg, style, filename)
+    # 100 randos
+    #for i in range(100)
+
 
 
     total = 0
