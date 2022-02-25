@@ -3,6 +3,7 @@ import json
 import random
 
 INPUT_DIR = "input"
+OUTPUT_DIR = "output/"
 JSON_OUT = "meta.json"
 
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
@@ -17,6 +18,14 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour '
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}'
 COLOUR_STYLE_END = ' </style>'
+
+# dynamic colours
+BASE_COLOUR_LIST = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff", "#ebda46", "#696969"] # TODO find better colours
+
+WIRE_1_COLOUR_LIST = []
+WIRE_1_DARK_COLOUR_LIST = [] # just wire 1 but with 20% transparent black overlay 
+WIRE_2_COLOUR_LIST = []
+WIRE_2_DARK_COLOUR_LIST = []
 
 PROPERTY_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
 
@@ -103,23 +112,28 @@ if __name__ == "__main__":
     # test
     neck = svg_meta["neck"]["neck"]
     head = svg_meta["head"]["head"]
-    eyes = svg_meta["eyes"]["ada"]
-    hat = svg_meta["hats"]["pi_hat_2"]
-    mouth = svg_meta["mouths"]["paint"]
-    inner_svg = neck + head + mouth + eyes + hat 
+    eyes = svg_meta["eyes"]["void"]
+    hat = svg_meta["hats"]["swiss_cheese_plant"]
+    hat = svg_meta["hats"]["yellow_cake"]
+    ears = svg_meta["ears"]["ram"]
+    mouth = svg_meta["mouths"]["simple"]
+    mouth = svg_meta["mouths"]["warning_patch_fluid"]
+    
+    inner_svg = neck + head + hat + mouth + ears + eyes
+    #style = COLOUR_STYLE_START + COLOR_STYLE_DEFAULT + COLOUR_STYLE_END
+    #make_svg(inner_svg, style, "test_basic.svg")
 
-    style = COLOUR_STYLE_START + COLOR_STYLE_DEFAULT + COLOUR_STYLE_END
-    print(style)
+    # remove all files 
+    for file in os.listdir(OUTPUT_DIR):
+        file = OUTPUT_DIR + file
+        os.remove(file)
 
-
-    make_svg(inner_svg, style, "test.svg")
-
-    for i in range(10):
-        r = lambda: random.randint(0,255)
-        color = "%06x" % random.randint(0, 0xFFFFFF)
-        print(color)
-        style = COLOUR_STYLE_START + "{fill: #" + color + "}"+ COLOUR_STYLE_END
-        filename = "test_" + str(i) + ".svg"
+    for i, col in enumerate(BASE_COLOUR_LIST):
+        #r = lambda: random.randint(0,255)
+        #color = "%06x" % random.randint(0, 0xFFFFFF)
+        #print(color)
+        style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
+        filename = OUTPUT_DIR + "test_" + str(i) + ".svg"
         make_svg(inner_svg, style, filename)
 
 
