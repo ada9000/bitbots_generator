@@ -3,6 +3,7 @@ import json
 import random
 import base64
 import random
+import re
 
 INPUT_DIR = "input"
 OUTPUT_DIR = "output/"
@@ -62,19 +63,13 @@ def generate_meta():
             with open(filepath, 'r') as f:
                 #data = f.read().replace('\n','')
                 data = f.read()
+
                 # remove all double or more whitespace substrings strings
                 new_str = ""
-                data_segments = []
-                segment_count = 0
-                # remove the XML tag the SVG endtag and all newlines
-                data = data.replace(XML_tag,'')
-                data = data.replace(SVG_end,'')
-                data = data.replace('\n', '')
-                # replace svg base colours with dynamic method
-                data = data.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
-                # loop though the string 
+
+                
                 for i in range(len(data)):
-                    # remove svg tag
+                    
                     # if we see the svg tag begin the skip
                     if data[i:i+4] == "<svg":
                         skip_svg = True
@@ -84,6 +79,7 @@ def generate_meta():
                     # skip if we are still on the svg tag
                     if skip_svg:
                         continue
+
                     # remove all instaces of two or more continues whitespace, 
                     # by only appending character that are not whitespace followed
                     # by whitespace
@@ -92,23 +88,21 @@ def generate_meta():
                             pass
                         else:
                             new_str += data[i]
-                    
-                    # segregate data into payloads due to 16kb limit. Also add data to payload
-                    # if we are at the last element
-                    if len(new_str.encode('utf-8')) > MAX_PAYLOAD_SIZE_BYTES:
-                        data_segments.append(new_str)
-                        segment_count += 1
-                        new_str = ""
-                    elif i == len(data) - 1:
-                        data_segments.append(new_str)
-                        segment_count += 1
-                    
                 
+                # remove the XML tag the SVG endtag and all newlines
+                new_str = new_str.replace(XML_tag,'')
+                new_str = new_str.replace(SVG_end,'')
+                new_str = new_str.replace('\n', '')
+
+                # replace svg base colours with dynamic method
+                new_str = new_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
+
                 # set data to the new refactored data
                 data = new_str
             
             # name the json entry
-            data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":data_segments}
+            segment_count = "todo"
+            data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":data}
             item_number += 1
             sub_items.append(file.replace('.svg',''))
             sub_nft_data[file.replace('.svg','')] = data
@@ -116,26 +110,25 @@ def generate_meta():
         # add dir and 
         meta[dir_name] = len(sub_items)
         nft_data[dir_name] = sub_nft_data
+
+        # add colours
+        data = {}
+        for col in BASE_COLOUR_LIST:
+            data[col] = {"weight":"", "max":"","current":"","type":"colour"}
+            nft_data["colour"] = data
         
     return meta, nft_data
 
 
 def make_svg(inner_svg:str, style:str, filename:str):
     """ create a svg file from given paramaters """
-    svg_str = XML_tag + " " + SVG_start + "\n" 
+    svg_str = XML_tag + "\n" + SVG_start + "\n" 
     svg_str += style + "\n"
-    svg_str += inner_svg + " " + SVG_end
+    svg_str += inner_svg + "\n" + SVG_end
 
-    if filename != None:
-        svg_to_file(svg_str)
-
-    return svg_str
-
-
-def svg_to_file(svg_str):
     with open(filename, "w") as f:
         f.write(svg_str)
-    return
+    
 
 
 def test_a(meta, svg_meta):
@@ -170,6 +163,40 @@ def test_a(meta, svg_meta):
     # 100 randos
     #for i in range(100)
 
+def payload_to_str(payload):
+    return payload
+    """
+    data = ""
+    for x in payload:
+        data += x
+
+    return data
+    """
+
+
+def nfts_to_svgs(meta, nfts):
+    #nfts[hex_hash] = {"props":properties, "colour":colour}
+    #print(nfts)
+    for n in nfts:
+
+        # make inner svg
+        neck = payload_to_str( meta["neck"]["neck"]["data"] )
+        head = payload_to_str( meta["head"]["head"]["data"] )
+        inner_svg = neck + head
+        for i, attribute in enumerate(ATTRIBUTES_WITH_WEIGHTS):
+            # TODO ignoring special
+            if attribute == "special":
+                break
+
+            trait = nfts[n]["props"][i]
+            inner_svg += payload_to_str( meta[attribute][trait]["data"] )
+        # make style
+        col = nfts[n]["colour"]
+        style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
+
+        # name and create file
+        filename = OUTPUT_DIR + str(n) + ".svg"
+        make_svg(inner_svg, style, filename)
     
 
 def load_json(filepath):
@@ -222,25 +249,34 @@ def weighted_rand(data):
                 hex_hash, properties = weight_inner()  
 
 
-        # TODO add random weighted colour here
+        # add random weighted colour here
+        traits = []
+        weights = []
+        for col in BASE_COLOUR_LIST:
+            traits.append(col)
+            weights.append(data["colour"][col]["weight"])
+        colour = random.choices(traits, weights)[0]
 
         # TODO add other random props here
         
+        
         # gen nft
-        nfts[hex_hash] = properties
+        nfts[hex_hash] = {"props":properties, "colour":colour}
 
+    print("Created " + str(MAX_MINT) + " nfts")
     return nfts
 
 
 def weight_inner():
-    traits = [] 
-    weights = []
-    properties = []
     hex_hash = "0x"
 
+    properties = []
     # this loop generates nfts based of weight values for traits within each attribute
     for attribute in ATTRIBUTES_WITH_WEIGHTS:
-        for i, trait in enumerate(data[attribute]):
+        traits = [] 
+        weights = []
+
+        for trait in data[attribute]:
             traits.append(trait)
             weights.append(data[attribute][trait]["weight"])
         
@@ -297,13 +333,18 @@ if __name__ == "__main__":
 
     clean()
     nfts = weighted_rand(data)
-    print(nfts)
+
+    nfts_to_svgs(data, nfts)
+
 
 
     #test_a(meta, svg_meta)
 
-    #[x] segregate files over 12kb into multiple files
-    #[ ] weighted_rand(meta, svg_meta)
-    #[ ] add weighted randomness to generation
+    #[x] weighted_rand(meta, svg_meta)
+    #[x] add weighted randomness to generation
+    #[ ] segregate files over 12kb into multiple files
     #[ ] put nfts in output folder
     #[ ] view all nfts
+    #[ ] TODO implement tally and other special mint options
+    #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
+    #[ ] TODO issue with normal ears
