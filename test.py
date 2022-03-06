@@ -2,8 +2,7 @@ import os
 import json
 import random
 import base64
-
-from numpy.random import choice
+import random
 
 INPUT_DIR = "input"
 OUTPUT_DIR = "output/"
@@ -32,8 +31,10 @@ WIRE_1_DARK_COLOUR_LIST = [] # just wire 1 but with 20% transparent black overla
 WIRE_2_COLOUR_LIST = []
 WIRE_2_DARK_COLOUR_LIST = []
 
-PROPERTY_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
+ATTRIBUTE_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
+ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes", "special"]
 
+MAX_MINT = 8192
 MAX_PAYLOAD_SIZE_BYTES = 12000
 
 DEFAULT_WEIGHT = 1.0
@@ -53,6 +54,7 @@ def generate_meta():
         sub_nft_data = {}
         sub_items = []
         # for each svg file inside a sub directory
+        item_number = 0
         for file in os.listdir(sub_dir_path):
             filepath = sub_dir_path + '/' + file
             skip_svg = False
@@ -100,12 +102,14 @@ def generate_meta():
                     elif i == len(data) - 1:
                         data_segments.append(new_str)
                         segment_count += 1
+                    
                 
                 # set data to the new refactored data
                 data = new_str
             
             # name the json entry
-            data = {"weight":"", "max":"","current":"","segments":segment_count, "data":data_segments}
+            data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":data_segments}
+            item_number += 1
             sub_items.append(file.replace('.svg',''))
             sub_nft_data[file.replace('.svg','')] = data
         
@@ -121,9 +125,18 @@ def make_svg(inner_svg:str, style:str, filename:str):
     svg_str = XML_tag + " " + SVG_start + "\n" 
     svg_str += style + "\n"
     svg_str += inner_svg + " " + SVG_end
+
+    if filename != None:
+        svg_to_file(svg_str)
+
+    return svg_str
+
+
+def svg_to_file(svg_str):
     with open(filename, "w") as f:
         f.write(svg_str)
     return
+
 
 def test_a(meta, svg_meta):
     # test a
@@ -197,9 +210,54 @@ def update_weights(meta, total):
     return meta
 
 
-def weighted_rand(svg_meta):
+def weighted_rand(data):
+    nfts = {}
+    meta = {}
+    for i in range(MAX_MINT):
+        # run inner loop that picks properties and creates a unique id based on props (hex_hash)
+        hex_hash, properties = weight_inner()  
+        # check for duplicates, and rerun until our new hex has is unique
+        if hex_hash in nfts.keys():
+            while hex_hash not in nfts.keys():
+                hex_hash, properties = weight_inner()  
 
-    pass
+
+        # TODO add random weighted colour here
+
+        # TODO add other random props here
+        
+        # gen nft
+        nfts[hex_hash] = properties
+
+    return nfts
+
+
+def weight_inner():
+    traits = [] 
+    weights = []
+    properties = []
+    hex_hash = "0x"
+
+    # this loop generates nfts based of weight values for traits within each attribute
+    for attribute in ATTRIBUTES_WITH_WEIGHTS:
+        for i, trait in enumerate(data[attribute]):
+            traits.append(trait)
+            weights.append(data[attribute][trait]["weight"])
+        
+        # select a weighted random trait
+        selection = random.choices(traits, weights)[0]
+        properties.append(selection)
+        
+        # find the traits attribute type
+        attribute_type = ""
+        for tmp in ATTRIBUTES_WITH_WEIGHTS:
+            if selection in data[tmp].keys():
+                attribute_type = tmp
+        
+        # convert the trait id to hexadecimal and append it to the hex_hash identifier
+        hex_hash += str(hex(data[attribute_type][selection]["id"])[2:])
+    
+    return hex_hash, properties
 
 
 def clean():
@@ -231,7 +289,7 @@ if __name__ == "__main__":
 
 
     # update weights
-    svg_meta = update_weights(data, total)
+    data = update_weights(data, total)
 
     # write json to file
     if REFRESH_META == True:
@@ -239,6 +297,7 @@ if __name__ == "__main__":
 
     clean()
     nfts = weighted_rand(data)
+    print(nfts)
 
 
     #test_a(meta, svg_meta)
