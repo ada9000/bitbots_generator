@@ -8,6 +8,7 @@ from numpy.random import choice
 INPUT_DIR = "input"
 OUTPUT_DIR = "output/"
 JSON_OUT = "meta.json"
+WEIGHTS_OUT = "weights.json"
 
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
 SVG_start = '\n<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
@@ -33,10 +34,12 @@ WIRE_2_DARK_COLOUR_LIST = []
 
 PROPERTY_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
 
-REFRESH_META = True
-
 MAX_PAYLOAD_SIZE_BYTES = 12000
 
+DEFAULT_WEIGHT = 1.0
+
+REFRESH_META = True
+UPDATE_WEIGHTS = True
 
 def generate_meta():
     """ generate metadata based of directory structure and filenames """
@@ -102,12 +105,12 @@ def generate_meta():
                 data = new_str
             
             # name the json entry
-            data = {"weight":10, "max":9000,"current":0,"segments":segment_count, "data":data_segments}
+            data = {"weight":"", "max":"","current":"","segments":segment_count, "data":data_segments}
             sub_items.append(file.replace('.svg',''))
             sub_nft_data[file.replace('.svg','')] = data
         
         # add dir and 
-        meta[dir_name] = {"count":len(sub_items)}
+        meta[dir_name] = len(sub_items)
         nft_data[dir_name] = sub_nft_data
         
     return meta, nft_data
@@ -136,8 +139,7 @@ def test_a(meta, svg_meta):
     inner_svg = neck + head + hat + mouth + ears + eyes
     #style = COLOUR_STYLE_START + COLOR_STYLE_DEFAULT + COLOUR_STYLE_END
     #make_svg(inner_svg, style, "test_basic.svg")
-
-   
+    
     for i, col in enumerate(BASE_COLOUR_LIST):
         #r = lambda: random.randint(0,255)
         #color = "%06x" % random.randint(0, 0xFFFFFF)
@@ -155,44 +157,89 @@ def test_a(meta, svg_meta):
     # 100 randos
     #for i in range(100)
 
-    total = 0
     
+
+def load_json(filepath):
+    data = {}
+    with open(filepath) as f:
+        data = json.load(f)
+    return data
+ 
+    pass
+
+def write_json(filepath, data):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    return
+
+
+def update_weights(meta, total):
+    weights = {}
+
+    if os.path.isfile(WEIGHTS_OUT):
+        weights = load_json(WEIGHTS_OUT)
+    
+    # for each item in the jsonfile
+    for trait in meta.keys():
+        for item in meta[trait].keys():
+
+            # if the item is not in weights add it to weights json
+            if item not in weights.keys():
+                weights[item] = {"weight":DEFAULT_WEIGHT, "max":total}
+            # if weights or max need updating, update them
+            if meta[trait][item]["weight"] != weights[item]["weight"]:
+                meta[trait][item]["weight"] = weights[item]["weight"]
+            if meta[trait][item]["max"] != weights[item]["max"]:
+                meta[trait][item]["max"] = weights[item]["max"]
+    
+    #update meta to reflect weights, return new meta
+    write_json(WEIGHTS_OUT, weights)
+    return meta
+
+
+def weighted_rand(svg_meta):
+
+    pass
+
+
+def clean():
+    """ clean files """
+    #remove all files in OUTPUT_DIR
+    for file in os.listdir(OUTPUT_DIR):
+        file = OUTPUT_DIR + file
+        os.remove(file)
+
+
+if __name__ == "__main__":
+    # gen meta and 
+    meta, data = generate_meta()
+    # size of string calcs for rough checks
+    json_str = json.dumps(data, ensure_ascii=False, indent=4)
+    utf_size = len(json_str.encode('utf-8'))
+    print("UTF size = " + str(utf_size / 1000.0 ) + "kB")
+
+    # find upper limit
+    total = 0
     # calc total
     for _ in range(meta['hats']):
         for _ in range(meta['eyes']):
             for _ in range(meta['mouths']):
                 for _ in range(meta['ears']):
                     total += 1
-
+    print(meta)
     print("Total in set = " + str(total))
 
 
-def weighted_rand(meta, svg_meta):
-    pass
-
-def clean():
-    # remove all files 
-    for file in os.listdir(OUTPUT_DIR):
-        file = OUTPUT_DIR + file
-        os.remove(file)
-
-
-
-if __name__ == "__main__":
-    meta, svg_meta = generate_meta()
-
-    # size of string calcs for rough checks
-    json_str = json.dumps(svg_meta, ensure_ascii=False, indent=4)
-    utf_size = len(json_str.encode('utf-8'))
-    print("UTF size = " + str(utf_size / 1000.0 ) + "kB")
+    # update weights
+    svg_meta = update_weights(data, total)
 
     # write json to file
     if REFRESH_META == True:
-        with open(JSON_OUT, 'w', encoding='utf-8') as f:
-            json.dump(svg_meta, f, ensure_ascii=False, indent=4)
+        write_json(JSON_OUT, data)
 
     clean()
-    print(meta)
+    nfts = weighted_rand(data)
+
 
     #test_a(meta, svg_meta)
 
