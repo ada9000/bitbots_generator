@@ -56,7 +56,21 @@ def generate_meta():
         sub_items = []
         # for each svg file inside a sub directory
         item_number = 0
+        
         for file in os.listdir(sub_dir_path):
+            
+            if item_number == 0:
+                if dir_name in ATTRIBUTES_WITH_WEIGHTS:
+                    # add none type
+                    none_type_name = "no_" + dir_name + ".svg"
+                    data = {"weight":"", "max":"","current":"","id":item_number,"type":dir_name, "data":""}
+                    sub_items.append(none_type_name)
+                    sub_nft_data[none_type_name] = data
+                    
+   
+            item_number += 1
+
+
             filepath = sub_dir_path + '/' + file
             skip_svg = False
             # open the svg file
@@ -103,7 +117,6 @@ def generate_meta():
             # name the json entry
             segment_count = "todo"
             data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":data}
-            item_number += 1
             sub_items.append(file.replace('.svg',''))
             sub_nft_data[file.replace('.svg','')] = data
         
@@ -291,7 +304,7 @@ def weight_inner():
                 attribute_type = tmp
         
         # convert the trait id to hexadecimal and append it to the hex_hash identifier
-        hex_hash += str(hex(data[attribute_type][selection]["id"])[2:])
+        hex_hash += str(hex(data[attribute_type][selection]["id"])[2:]) # TODO pad so it's always got a leading 0 ie: 7 = 07 or E = 0E
     
     return hex_hash, properties
 
@@ -348,3 +361,5 @@ if __name__ == "__main__":
     #[ ] TODO implement tally and other special mint options
     #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
     #[ ] TODO issue with normal ears
+    #[ ] in 721 no_<item> is renamed to none
+    # TODO where is special?
