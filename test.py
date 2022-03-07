@@ -36,6 +36,7 @@ WIRE_2_DARK_COLOUR_LIST = []
 ATTRIBUTE_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
 ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes", "special"]
 
+
 MAX_MINT = 8192
 MAX_PAYLOAD_SIZE_BYTES = 12000
 
@@ -143,8 +144,8 @@ def generate_meta():
 
         # add colours
         data = {}
-        for col in BASE_COLOUR_LIST:
-            data[col] = {"weight":"", "max":"","current":"","type":"colour"}
+        for i, col in enumerate(BASE_COLOUR_LIST):
+            data[col] = {"weight":"", "max":"","current":"","id":i,"type":"colour"}
             nft_data["colour"] = data
         
     return meta, nft_data
@@ -197,7 +198,6 @@ def payload_to_str(payload):
     data = ""
     for x in payload:
         data += x
-
     return data
 
 
@@ -267,34 +267,41 @@ def update_weights(meta, total):
 def weighted_rand(data):
     nfts = {}
     meta = {}
-    for i in range(MAX_MINT):
+
+    stats = {}
+
+    while len(nfts) != MAX_MINT:
         # run inner loop that picks properties and creates a unique id based on props (hex_hash)
-        hex_hash, properties = weight_inner()  
+        hex_hash, properties, colour = weight_inner(data)  
         # check for duplicates, and rerun until our new hex has is unique
         if hex_hash in nfts.keys():
             while hex_hash not in nfts.keys():
-                hex_hash, properties = weight_inner()  
-
-
-        # add random weighted colour here
-        traits = []
-        weights = []
-        for col in BASE_COLOUR_LIST:
-            traits.append(col)
-            weights.append(data["colour"][col]["weight"])
-        colour = random.choices(traits, weights)[0]
-
-        # TODO add other random props here
+                hex_hash, properties, colour = weight_inner(data)  
         
+        # collect stats
+        for x in properties:
+            if x not in stats.keys():
+                stats[x] = 1
+            else:
+                stats[x] += 1
         
+        if colour not in stats.keys():
+            stats[colour] = 1
+        else:
+            stats[colour] += 1
+
         # gen nft
         nfts[hex_hash] = {"props":properties, "colour":colour}
 
+    print("stats:")
+    print(stats)
     print("Created " + str(MAX_MINT) + " nfts")
+    write_json(OUTPUT_DIR + "000_nftdata.json", nfts)
+    write_json(OUTPUT_DIR + "000_stats.json", stats)
     return nfts
 
 
-def weight_inner():
+def weight_inner(data):
     hex_hash = "0x"
 
     properties = []
@@ -316,11 +323,21 @@ def weight_inner():
         for tmp in ATTRIBUTES_WITH_WEIGHTS:
             if selection in data[tmp].keys():
                 attribute_type = tmp
-        
+
         # convert the trait id to hexadecimal and append it to the hex_hash identifier
-        hex_hash += str(hex(data[attribute_type][selection]["id"])[2:]) # TODO pad so it's always got a leading 0 ie: 7 = 07 or E = 0E
-    
-    return hex_hash, properties
+        hex_hash += str(hex(data[attribute_type][selection]["id"])[2:]).zfill(2) # TODO pad so it's always got a leading 0 ie: 7 = 07 or E = 0E
+        
+        # add random weighted colour here
+        traits = []
+        weights = []
+        for col in BASE_COLOUR_LIST:
+            traits.append(col)
+            weights.append(data["colour"][col]["weight"])
+        colour = random.choices(traits, weights)[0]
+        # add colour to hex hash
+        hex_hash += str(hex(data["colour"][colour]["id"])[2:]).zfill(2)
+
+    return hex_hash, properties, colour
 
 
 def clean():
