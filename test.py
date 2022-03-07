@@ -209,7 +209,13 @@ def nfts_to_svgs(meta, nfts):
         # make inner svg
         neck = payload_to_str( meta["neck"]["neck"]["data"] )
         head = payload_to_str( meta["head"]["head"]["data"] )
-        inner_svg = neck + head
+
+        # TODO testing special
+        special_attribute = nfts[n]["props"][4]
+        special = payload_to_str( meta["special"][special_attribute]["data"])
+        inner_svg = neck + special + head
+        #inner_svg = neck + head
+        
         for i, attribute in enumerate(ATTRIBUTES_WITH_WEIGHTS):
             # TODO ignoring special
             if attribute == "special":
@@ -217,6 +223,8 @@ def nfts_to_svgs(meta, nfts):
 
             trait = nfts[n]["props"][i]
             inner_svg += payload_to_str( meta[attribute][trait]["data"] )
+
+
         # make style
         col = nfts[n]["colour"]
         style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
