@@ -4,6 +4,7 @@ import random
 import base64
 import random
 import re
+import sys
 
 INPUT_DIR = "input"
 OUTPUT_DIR = "output/"
@@ -113,10 +114,26 @@ def generate_meta():
 
                 # set data to the new refactored data
                 data = new_str
+
+                # segregate data into segments
+                segments = []
+                segment_count = 0
+                current_segment = ""
+                for x in data:
+                    current_segment += x
+                    if sys.getsizeof(current_segment) >= MAX_PAYLOAD_SIZE_BYTES:
+                        segment_count += 1
+                        segments.append(current_segment)
+                        current_segment = ""
+                
+                if current_segment != "":
+                    segment_count += 1
+                    segments.append(current_segment)
+
+
             
             # name the json entry
-            segment_count = "todo"
-            data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":data}
+            data = {"weight":"", "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":segments}
             sub_items.append(file.replace('.svg',''))
             sub_nft_data[file.replace('.svg','')] = data
         
@@ -177,14 +194,11 @@ def test_a(meta, svg_meta):
     #for i in range(100)
 
 def payload_to_str(payload):
-    return payload
-    """
     data = ""
     for x in payload:
         data += x
 
     return data
-    """
 
 
 def nfts_to_svgs(meta, nfts):
