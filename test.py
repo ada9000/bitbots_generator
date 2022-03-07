@@ -212,7 +212,7 @@ def nfts_to_svgs(meta, nfts):
 
         # TODO testing special
         special_attribute = nfts[n]["props"][4]
-        special = payload_to_str( meta["special"][special_attribute]["data"])
+        special = payload_to_str( meta["special"]["lobster"]["data"])
         inner_svg = neck + special + head
         #inner_svg = neck + head
         
@@ -394,11 +394,20 @@ if __name__ == "__main__":
 
     #[x] weighted_rand(meta, svg_meta)
     #[x] add weighted randomness to generation
-    #[ ] segregate files over 12kb into multiple files
-    #[ ] put nfts in output folder
+    #[x] segregate files over 12kb into multiple files
+    #[x] put nfts in output folder
     #[ ] view all nfts
+    #[ ] TODO add webclient
+    #[ ] TODO convert to Cardano 721 metadata
+    #[ ] TODO webclient can read Cardano 721 metadata
     #[ ] TODO implement tally and other special mint options
     #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
     #[ ] TODO issue with normal ears
     #[ ] in 721 no_<item> is renamed to none
+
+    # Turn this file into business logic and server
+    # Add API
+
+    # Create react page for front-end
+
     # TODO where is special?
