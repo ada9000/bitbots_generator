@@ -44,6 +44,28 @@ ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes", "special"]
 
 DEFAULT_WEIGHT = 1.0
 
+# Notes TODO REMOVE
+    #[x] weighted_rand(meta, svg_meta)
+    #[x] add weighted randomness to generation
+    #[x] segregate files over 12kb into multiple files
+    #[x] put nfts in output folder
+    #[ ] view all nfts
+    #[ ] TODO add webclient
+    #[ ] TODO convert to Cardano 721 metadata
+    #[ ] TODO webclient can read Cardano 721 metadata
+    #[ ] TODO implement tally and other special mint options
+    #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
+    #[ ] TODO issue with normal ears
+    #[ ] in 721 no_<item> is renamed to none
+
+    # Turn this file into business logic and server
+    # Add API
+    # Create react page for front-end
+    # TODO where is special?
+    # TODO turn the whole codebase into a class
+    # TODO methods
+    #       generate # does everything
+
 # functions-------------------------------------------------------------------
 def load_json(filepath):
     data = {}
@@ -343,29 +365,3 @@ class Bitbots:
         json_str = json.dumps(self.nft_meta, ensure_ascii=False, indent=4)
         utf_size = len(json_str.encode('utf-8'))
         print("UTF size of meta file ~" + str(utf_size / 1000.0 ) + "kB")
-
-if __name__ == "__main__":
-    b = Bitbots()
-    #[x] weighted_rand(meta, svg_meta)
-    #[x] add weighted randomness to generation
-    #[x] segregate files over 12kb into multiple files
-    #[x] put nfts in output folder
-    #[ ] view all nfts
-    #[ ] TODO add webclient
-    #[ ] TODO convert to Cardano 721 metadata
-    #[ ] TODO webclient can read Cardano 721 metadata
-    #[ ] TODO implement tally and other special mint options
-    #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
-    #[ ] TODO issue with normal ears
-    #[ ] in 721 no_<item> is renamed to none
-
-    # Turn this file into business logic and server
-    # Add API
-
-    # Create react page for front-end
-
-    # TODO where is special?
-
-    # TODO turn the whole codebase into a class
-    # TODO methods
-    #       generate # does everything
