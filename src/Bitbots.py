@@ -111,6 +111,23 @@ class Bitbots:
             file = OUTPUT_DIR + file
             os.remove(file)
 
+    def shuffle(self):
+        nfts = {}
+        nums = list(range(0, self.max_mint))
+        random.shuffle(nums)
+        print("shuffle...")
+        i = 0
+        for tmp in os.listdir("../output/"):
+            if ".svg" in tmp:
+                filename = "../output/" + tmp
+                text = open(filename, 'r')
+                nft = text.read()
+                text.close()
+                nfts[str(nums[i])] = nft
+                i += 1
+        print("shuffle done!")
+        write_json("filepath.json", nfts)
+        return nfts
 
     def populate_nft_from_input(self):
         """ generate metadata based of directory structure and filenames """
