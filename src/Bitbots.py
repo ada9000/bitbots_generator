@@ -20,7 +20,7 @@ NFT_MINT_STATS_JSON = OUTPUT_DIR + "_nft-mint-stats.json"
 
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
-SVG_start = '\n<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
+SVG_start = '<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
 SVG_end = '</svg>'
 
 # colour consts used to replace SVG colours with variables
@@ -220,7 +220,8 @@ class Bitbots:
 
     def make_svg(self, inner_svg:str, style:str, filename:str):
         """ create a svg file from given paramaters """
-        svg_str = XML_tag + "\n" + SVG_start + "\n" 
+        #svg_str = XML_tag + "\n" + SVG_start + "\n" 
+        svg_str = "\n" + SVG_start + "\n" 
         svg_str += style + "\n"
         svg_str += inner_svg + "\n" + SVG_end
 
