@@ -7,6 +7,8 @@ from Bitbots import Bitbots
 
 from flask_cors import CORS
 
+import urllib.parse
+
 b = Bitbots()
 nfts = b.shuffle()
 app = Flask(__name__)
@@ -37,6 +39,20 @@ def random_nft():
     n = random.randint(0, 8192)
     print("sending...")
     return jsonify(nfts[str(n)])
+
+@app.route("/test")
+def test():
+    n = random.randint(0, 8192)
+    print("sending...")
+    test = nfts[str(n)]
+    test = urllib.parse.quote(test)
+    return test
+
+@app.route("/showme")
+def showme():
+    n = random.randint(0, 8192)
+    test = nfts[str(n)]
+    return test
 
 # get specific
 @app.route("/nfts")
