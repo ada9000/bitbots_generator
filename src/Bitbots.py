@@ -317,8 +317,9 @@ class Bitbots:
                     hex_hash, properties = self.gen_random_props()  
             # apply refs
             refs = self.find_refs_for_props(properties)
-            # gen nft
-            nfts[nft_mint_number] = {"meta":properties, "hex":hex_hash, "refs":refs}
+            # save nft with padded number i.e 0001,...,1111,...,n
+            nft_mint_number_str = str(nft_mint_number).zfill(4)
+            nfts[nft_mint_number_str] = {"meta":properties, "hex":hex_hash, "refs":refs}
             nft_mint_number += 1
         # update set data with new nfts and save to file
         self.nft_set_data = nfts
