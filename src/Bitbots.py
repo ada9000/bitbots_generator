@@ -62,30 +62,50 @@ def write_json(filepath, data):
 
 # Nft ------------------------------------------------------------------------
 class Nft:
-    def __init__(self, policyid:str="TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc"):
+    def __init__(self, policyid:str="todo"):
 
         self.policyid = policyid
         self.nft_CIP = '721'
         self.new_CIP = '696'
 
-    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[]):
-        meta = {self.nft_CIP:'', self.new_CIP:''}
+    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[], properties):
         # TODO note nft_references might be ints but json only allows string keys
+        meta = {}
         # 721 
         # notice the new CIP line
         # TODO convert this to variables passed into method
         nft_details = {
-            'project':'test',
-            'traits':{'eye':'ada_eye','hat':'brain'},
+            'project':'Copyright Bitbots.art 2022',
+            'traits':properties,
             'description':'nft showcasing new CIP',
             self.new_CIP: {'mediaType':'image/svg+xml','ref':nft_references}
             }
-        meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
+        #meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
 
-        # new cip stuff
-        meta[self.new_CIP] = {self.policyid:{payload_ref:nft_payload}}
+        if nft_payload != None:
+            # include new CIP payload
+            meta = {
+                self.nft_CIP:{
+                    self.policyid:{
+                        nft_name:nft_details
+                        }
+                    }, 
+                self.new_CIP:{
+                    self.policyid:{
+                        payload_ref:nft_payload
+                        }
+                    }
+                }
+        else:
+            # ignore new CIP payload
+            meta = {
+                self.nft_CIP:{
+                    self.policyid:{
+                        nft_name:nft_details
+                        }
+                    }
+                }
         
-        print(json.dumps(meta, indent=4))
         return meta
 
 
@@ -102,13 +122,14 @@ class Bitbots:
         # meta data       
         self.nft_traits = {}        # json defining each trait
         self.nft_attributes = {}    # json defining all attributes
-        # mint data
+        # mint/set data
         self.nft_set_data = {}
-        self.nft_mint_data = {} #metadata for mint
         # payload vars
         self.payload_meta = {} # about payload indices
         self.payload_data = {} # payload data
         self.payload_index = 0
+        # Cardano nft meta
+        self.cardano_nft_meta = {}
 
         # generate nft
         self.generate(reset)
@@ -129,6 +150,7 @@ class Bitbots:
         self.svg_from_nft_data()
         # create nft that conforms to CIP's
         self.create_cardano_nft()
+        print("Payload count is " + str(self.payload_index))
 
 
     def clean(self):
@@ -281,7 +303,6 @@ class Bitbots:
     def find_refs_for_props(self, properties):
         """ helper function to generate refs for a give set of nft properties """
         refs = []
-        order = ['neck','special','head','hats','ears','mouths','eyes']
         #self.payload_meta[trait] = used_indices
         refs += self.find_payload_refs('startcolour')
         refs += self.find_payload_refs(properties['colour'])
@@ -289,7 +310,6 @@ class Bitbots:
         refs += self.find_payload_refs('neck')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
-        refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs(properties['hats'])
         refs += self.find_payload_refs(properties['ears'])
         refs += self.find_payload_refs(properties['mouths'])
@@ -459,15 +479,26 @@ class Bitbots:
         #       src = {payloads [0,1,3,4,20,21,99,100]}
         #   payload tag <- note payload tag
         #       data = ["asdasdfds",asdfdsfasdfd,"asfdsdafdsa"]
-        pass
+        return "TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc"
 
     def create_cardano_nft(self):
-        self.gen_721_policy()
+        policyid = self.gen_721_policy()
+        n = Nft(policyid)
 
         for i in self.nft_set_data:
-            pass
-        # using nft data
-        # using payload meta
-        # populate a 721 meta
-        # 0: policyid nft721 .... etc
-        pass 
+            nft_name = i
+            i = int(i)
+            
+            payload_refs = self.nft_set_data[nft_name]["refs"]
+            
+            nft_payload = None
+            if i < len(self.payload_data):
+                nft_payload = self.payload_data[i]
+
+            props = self.nft_set_data[nft_name]["meta"]
+
+            cardano_meta = n.generate_nft(nft_name=nft_name, payload_ref=i, nft_payload=nft_payload, nft_references=payload_refs, properties=props)
+            self.cardano_nft_meta[nft_name] = cardano_meta
+            #
+            f = OUTPUT_DIR + nft_name + ".json"
+            write_json(f, cardano_meta)
