@@ -38,14 +38,14 @@ ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes"]
 
 DEFAULT_WEIGHT = 1.0
 
-# Notes TODO REMOVE
-    #[ ] TODO add webclient
-    #[ ] TODO convert to Cardano 721 metadata
-    #[ ] TODO webclient can read Cardano 721 metadata
-    #[ ] TODO implement tally and other special mint options
-    #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
-    #[ ] in 721 no_<item> is renamed to none
-    #[ ] todo NFT n that holds the colour payload will be PURE nft of said colour
+# TODO
+# [ ] implent id special tag
+# [ ] implent tally
+# [ ] fix artifacts in svg's
+# [ ] rename meta items (remove underscore etc)
+# [ ] no_<attribute> is renamed to none in metadata
+# [ ] ensure only 503 are lobsters (and these are giveaways)
+# [ ] NFT n that holds the colour payload will be PURE nft of said colour
 
 
 # functions-------------------------------------------------------------------
