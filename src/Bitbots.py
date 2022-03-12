@@ -13,34 +13,28 @@ import sys
 # consts ---------------------------------------------------------------------
 INPUT_DIR = "../input"
 OUTPUT_DIR = "../output/"
-NFT_META_JSON = "nft-meta.json"
-NFT_DATA_JSON = "nft-data.json"
-NFT_WEIGHTS_JSON = "nft-weights.json"
-NFT_MINT_STATS_JSON = OUTPUT_DIR + "_nft-mint-stats.json"
+NFT_TRAIT_META_FILE = "nft-trait-meta.json"
+NFT_ATTRIBUTES_META_FILE = "nft-attributes-meta.json"
+NFT_WEIGHTS_FILE = "nft-weights.json"
+NFT_PAYLOAD_FILE = "nft-payload.json"
+
+NFT_MINT_DATA_FILE = "nft-mint-data.json"
+NFT_MINT_STATS_FILE = OUTPUT_DIR + "_nft-mint-stats.json"
 
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
 SVG_start = '<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
 SVG_end = '</svg>'
-
 # colour consts used to replace SVG colours with variables
 BASE_COLOUR = 'style="fill:rgb(219,212,255);"'
 BASE_COLOUR_REPLACE = 'class="base_colour"'
-COLOUR_STYLE_START = '<style> .base_colour '
-COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}'
-COLOUR_STYLE_END = ' </style>'
-
-# dynamic colours
-BASE_COLOUR_LIST = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff", "#ebda46", "#696969"] # TODO find better colours
-
-WIRE_1_COLOUR_LIST = []
-WIRE_1_DARK_COLOUR_LIST = [] # just wire 1 but with 20% transparent black overlay 
-WIRE_2_COLOUR_LIST = []
-WIRE_2_DARK_COLOUR_LIST = []
+COLOUR_STYLE_START = '<style> .base_colour {fill:'
+COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
+COLOUR_STYLE_END = '} </style>'
 
 # attribute order
 ATTRIBUTE_ORDER = ["neck", "special", "head", "hats", "ears", "mouths", "eyes"]
-ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes", "special"]
+ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes"]
 
 DEFAULT_WEIGHT = 1.0
 
@@ -108,41 +102,54 @@ class Nft:
         meta[self.new_CIP] = {self.policyid:{payload_ref:nft_payload}}
         
         print(json.dumps(meta, indent=4))
+        return meta
 
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
     def __init__(self, max_mint:int=8192, max_payload_bytes:int=12000, reset:bool=True):
+        # vars
+        self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
+        self.colour_lst = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff", "#ebda46", "#696969"]
+        self.ref_order = ['startcolour','colour','endcolour','neck','special','head','hats','ears','mouths','eyes']
+        # parameters
         self.max_mint = max_mint
         self.max_payload_bytes = max_payload_bytes
-        self.nft_meta = {}
-        self.nft_stats = {}
-        self.nft_weights = {}
-        self.nft_attributes = {}
-        self.nft_data = {}
+        # meta data       
+        self.nft_traits = {}        # json defining each trait
+        self.nft_attributes = {}    # json defining all attributes
+        # mint data
+        self.nft_set_data = {}
         self.nft_mint_data = {} #metadata for mint
-
+        # payload vars
         self.payload_meta = {} # about payload indices
         self.payload_data = {} # payload data
         self.payload_index = 0
+
         # generate nft
         self.generate(reset)
 
     def generate(self, reset:bool=True):
         if not reset:
             return
-
+        # clean and get data from files
         self.clean()
-        self.populate_nft_from_input()
+        self.nft_meta_from_files()
+        # update and apply weights
         self.update_weights()
-        self.weighted_rand()
-        
-        self.make_svgs_from_nft_data()
-        self.size_test()
 
-        # add Cardano stuff
+        # add payload refs
         self.gen_payload_meta()
+
+        # create a random nft set!
+        self.generate_random_set()
+        
+        # 
+        self.make_svgs_from_nft_data()
+
         self.gen_721()
+        # 
+        self.make_svg_from_payloads()
 
     def clean(self):
         """ clean files """
@@ -169,99 +176,95 @@ class Bitbots:
         write_json("filepath.json", nfts)
         return nfts
 
-    def populate_nft_from_input(self):
+
+    def clean_svg(self, data):
+        # remove all double or more whitespace substrings strings
+        skip_svg = False
+        svg_str = ""
+        for i in range(len(data)):
+            # if we see the svg tag begin the skip
+            if data[i:i+4] == "<svg":
+                skip_svg = True
+            # if the last char was the end of the svg disable the skip process
+            if data[i-1] == ">":
+                skip_svg = False
+            # skip if we are still on the svg tag
+            if skip_svg:
+                continue
+            # remove all instaces of two or more continues whitespace, 
+            # by only appending character that are not whitespace followed
+            # by whitespace
+            if (i + 1) < len(data):
+                if data[i] == ' ' and data[i+1] == ' ':
+                    pass
+                else:
+                    svg_str += data[i]
+        # remove the XML tag the SVG endtag and all newlines
+        svg_str = svg_str.replace(XML_tag,'')
+        svg_str = svg_str.replace(SVG_end,'')
+        svg_str = svg_str.replace('\n', '')
+        # replace svg base colours with dynamic method
+        svg_str = svg_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
+        # set data to the new refactored data
+        return svg_str 
+
+    def get_traits(self, attribbute:str):
+        return self.nft_attributes[attribbute]
+
+    def get_trait_refs(self, attribbute:str):
+        return None # TODO
+
+    def nft_meta_inner(self, attribute:str, id_num:int, data:str):
+        return {'attribute':attribute, 'id':id_num, 'weight':1.0, 'max':self.max_mint, 'data':data}
+
+
+    def nft_meta_from_files(self):
         """ generate metadata based of directory structure and filenames """
         # for each file in our INPUT_DIR, create a nft data entry (key)
         # then for each file in that dir get extract the metadata and svg payload
-        for dir_name in os.listdir(INPUT_DIR):
-            sub_dir_path = INPUT_DIR + '/' + dir_name
-            sub_nft_data = {}
-            sub_items = []
+        self.nft_attributes = {}
+        for attribute in os.listdir(INPUT_DIR):
+            sub_dir_path = INPUT_DIR + '/' + attribute
+            details = {}
+            data = ""
+            id_num = 0
+            traits = []
             # for each svg file inside a sub directory
-            item_number = 0
-            for file in os.listdir(sub_dir_path):
-                # Append 'none' traits type once to each attribute
-                if item_number == 0:
-                    if dir_name in ATTRIBUTES_WITH_WEIGHTS:
-                        # add none type
-                        none_type_name = "no_" + dir_name + ".svg"
-                        data = {"weight":DEFAULT_WEIGHT, "max":self.max_mint,"current":"","id":item_number,"type":dir_name, "data":""}
-                        sub_items.append(none_type_name)
-                        sub_nft_data[none_type_name] = data
-                        
-                item_number += 1
-                filepath = sub_dir_path + '/' + file
+            # if the dirname is variable add none type 
+            if attribute in self.variable_attributes:
+                # TODO add none type
+                trait = "no_" + attribute
+                self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, data)
+                id_num += 1
+                traits.append(trait)
+            # geneate metadata for each trait
+            for trait in os.listdir(sub_dir_path):
+                filepath = sub_dir_path + '/' + trait
+                trait = trait.replace('.svg','')
                 skip_svg = False
                 # open the svg file
                 with open(filepath, 'r') as f:
                     data = f.read()
-                    # remove all double or more whitespace substrings strings
-                    svg_str = ""
-                    
-                    for i in range(len(data)):
-                        # if we see the svg tag begin the skip
-                        if data[i:i+4] == "<svg":
-                            skip_svg = True
-                        # if the last char was the end of the svg disable the skip process
-                        if data[i-1] == ">":
-                            skip_svg = False
-                        # skip if we are still on the svg tag
-                        if skip_svg:
-                            continue
+                # clean / format svg
+                data = self.clean_svg(data)
+                # add new trait to nft_meta, including it's attribbute, id and svg data
+                self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, data)
+                id_num += 1
+                # add traits for meta-meta data
+                traits.append(trait)
+            # meta meta data 
+            self.nft_attributes[attribute] = traits
+        # add colours to the set
+        id_num = 0
+        for trait in self.colour_lst:
+            self.nft_traits[trait] = self.nft_meta_inner('colour', id_num, trait)
+            id_num += 1
+        # add colours to the nft attributes
+        self.nft_attributes['colour'] = self.colour_lst
+        # save to file 
+        write_json(NFT_TRAIT_META_FILE, self.nft_traits)
+        write_json(NFT_ATTRIBUTES_META_FILE, self.nft_attributes)
 
-                        # remove all instaces of two or more continues whitespace, 
-                        # by only appending character that are not whitespace followed
-                        # by whitespace
-                        if (i + 1) < len(data):
-                            if data[i] == ' ' and data[i+1] == ' ':
-                                pass
-                            else:
-                                svg_str += data[i]
-                    
-                    # remove the XML tag the SVG endtag and all newlines
-                    svg_str = svg_str.replace(XML_tag,'')
-                    svg_str = svg_str.replace(SVG_end,'')
-                    svg_str = svg_str.replace('\n', '')
-                    # replace svg base colours with dynamic method
-                    svg_str = svg_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
-
-                    # set data to the new refactored data
-                    data = svg_str
-
-                    # segregate data into segments
-                    # TODO segments deprecated?
-                    """
-                    segments = []
-                    segment_count = 0
-                    current_segment = ""
-                    for x in data:
-                        current_segment += x
-                        if sys.getsizeof(current_segment) >= self.max_payload_bytes:
-                            segment_count += 1
-                            segments.append(current_segment)
-                            current_segment = ""
-                    
-                    if current_segment != "":
-                        segment_count += 1
-                        segments.append(current_segment)
-                    """
-
-                # name the json entry
-                data = {"weight":DEFAULT_WEIGHT, "max":"","current":"","id":item_number,"type":dir_name, "data":data}
-                sub_items.append(file.replace('.svg',''))
-                sub_nft_data[file.replace('.svg','')] = data
-            
-            # add dir and 
-            self.nft_attributes[dir_name] = len(sub_items)
-            self.nft_meta[dir_name] = sub_nft_data
-
-            # add colours
-            data = {}
-            for i, col in enumerate(BASE_COLOUR_LIST):
-                data[col] = {"weight":"", "max":"","current":"","id":i,"type":"colour"}
-                self.nft_meta["colour"] = data
-
-            write_json(NFT_META_JSON, self.nft_meta)
 
     def make_svg(self, inner_svg:str, style:str, filename:str):
         """ create a svg file from given paramaters """
@@ -269,7 +272,7 @@ class Bitbots:
         svg_str = SVG_start + "\n" 
         svg_str += style + "\n"
         svg_str += inner_svg + "\n" + SVG_end
-
+        
         with open(filename, "w") as f:
             f.write(svg_str)
     
@@ -281,132 +284,159 @@ class Bitbots:
             data += x
         return data
 
+    def get_payload_refs(self, nft_ref_arr:[], trait:str):
+        # add the payload references to an array the nft will use this to
+        # find the correct order of data that makes the final image
+        for i in self.payload_meta[trait]:
+            nft_ref_arr.append(i)
+        return nft_ref_arr
 
-    def make_svgs_from_nft_data(self):
-        for n in self.nft_data:
+    def make_svg_from_payloads(self):
+        # we use the nft_data
+        for n in self.nft_set_data:
+            nft_ref_arr = []
+            # add color
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, "colour")
+            col = self.nft_set_data[n]['colour']
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, col)
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, "endcolour")
 
-            # make inner svg
-            neck = self.nft_meta["neck"]["neck"]["data"]
-            head = self.nft_meta["head"]["head"]["data"]
+            # neck
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, "neck")
+            # special
+            print(self.nft_set_data[n])
+            trait = self.nft_set_data[n]["special"]
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, trait)
+            # head
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, "head")
 
-            # TODO testing special
-            special_attribute = self.nft_data[n]["props"][4]
-            special = self.nft_meta["special"]["lobster"]["data"]
-            inner_svg = neck + special + head
-            #inner_svg = neck + head
-            
-            for i, attribute in enumerate(ATTRIBUTES_WITH_WEIGHTS):
-                # TODO ignoring special
-                if attribute == "special":
-                    break
+            # others
+            for attrubute in ATTRIBUTES_WITH_WEIGHTS:
+                trait = self.nft_set_data[n][attrubute]
+                nft_ref_arr = self.get_payload_refs(nft_ref_arr, trait)
+                
 
-                trait = self.nft_data[n]["props"][i]
-                inner_svg += self.nft_meta[attribute][trait]["data"]
-
-
-            # make style
-            col = self.nft_data[n]["colour"]
-            style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
-
-            # name and create file
+            nft_ref_arr = self.get_payload_refs(nft_ref_arr, "end")
+            # write the file
             filename = OUTPUT_DIR + str(n) + ".svg"
-            self.make_svg(inner_svg, style, filename)
+
+            breakpoint()
+            svg_str = "todo"
+
+            with open(filename, "w") as f:
+                f.write(svg_str)
+
+
+        pass
+
+    def make_svgs_from_nft_data(self): # TODO deprecate
+        for n in self.nft_set_data:
+            filename = OUTPUT_DIR + str(n) + ".svg"
+
+            svg_str = ""
+            for i in self.nft_set_data[n]["refs"]:
+                for line in self.payload_data[i]:
+                    svg_str += line
+
     
+            with open(filename, "w") as f:
+                f.write(svg_str)
 
     def update_weights(self):
         # init weights load them if they exists
         weights = {}
-        if os.path.isfile(NFT_WEIGHTS_JSON):
-            weights = load_json(NFT_WEIGHTS_JSON)
+        if os.path.isfile(NFT_WEIGHTS_FILE):
+            weights = load_json(NFT_WEIGHTS_FILE)
         
+        # update weights for all traits
+        for trait in self.nft_traits.keys():
+            # if the item is not in weights add it to weights json (populate the file)
+            if trait not in weights.keys():
+                weights[trait] = {"weight":DEFAULT_WEIGHT, "max":self.max_mint}
 
-        # for each item in the jsonfile
-        for trait in self.nft_meta.keys():
-            for item in self.nft_meta[trait].keys():
-                # if the item is not in weights add it to weights json
-                if item not in weights.keys():
-                    weights[item] = {"weight":DEFAULT_WEIGHT, "max":self.max_mint}
-                # if weights or max need updating, update them
-                if self.nft_meta[trait][item]["weight"] != weights[item]["weight"]:
-                    self.nft_meta[trait][item]["weight"] = weights[item]["weight"]
-                if self.nft_meta[trait][item]["max"] != weights[item]["max"]:
-                    self.nft_meta[trait][item]["max"] = weights[item]["max"]
+            # if weights or max need updating, update them
+            if self.nft_traits[trait]["weight"] != weights[trait]["weight"]:
+                self.nft_traits[trait]["weight"] = weights[trait]["weight"]
+            if self.nft_traits[trait]["max"] != weights[trait]["max"]:
+                self.nft_traits[trait]["max"] = weights[trait]["max"]
         
         # save weights in a json file (user can edit them)
-        self.nft_weights = weights
-        write_json(NFT_WEIGHTS_JSON, weights)
+        write_json(NFT_WEIGHTS_FILE, weights)
+
+    def apply_refs_inner(self, payload_trait):
+        res = []
+        for i in self.payload_meta[payload_trait]:
+            res += [i]
+        return res
+
+    def apply_refs(self, properties):
+        refs = []
+        order = ['neck','special','head','hats','ears','mouths','eyes']
+        #self.payload_meta[trait] = used_indices
+        refs += self.apply_refs_inner('startcolour')
+        refs += self.apply_refs_inner(properties['colour'])
+        refs += self.apply_refs_inner('endcolour')
+        refs += self.apply_refs_inner('neck')
+        refs += self.apply_refs_inner(properties['special'])
+        refs += self.apply_refs_inner('head')
+        refs += self.apply_refs_inner(properties['special'])
+        refs += self.apply_refs_inner(properties['hats'])
+        refs += self.apply_refs_inner(properties['ears'])
+        refs += self.apply_refs_inner(properties['mouths'])
+        refs += self.apply_refs_inner(properties['eyes'])
+        refs += self.apply_refs_inner('end')
+        return refs
 
 
-    def weighted_rand(self):
+    def generate_random_set(self):
         nfts = {}
         stats = {}
+        nft_mint_number = 0
+        used_hashes = []
 
         while len(nfts) != self.max_mint:
+            refs = []
             # run inner loop that picks properties and creates a unique id based on props (hex_hash)
-            hex_hash, properties, colour = self.weight_inner()  
+            hex_hash, properties = self.weight_inner()  
             # check for duplicates, and rerun until our new hex has is unique
-            if hex_hash in nfts.keys():
-                while hex_hash not in nfts.keys():
-                    hex_hash, properties, colour = self.weight_inner()  
+            for h in used_hashes:
+                while hex_hash not in used_hashes:
+                    hex_hash, properties = self.weight_inner()  
             
-            # collect stats
-            for x in properties:
-                if x not in stats.keys():
-                    stats[x] = 1
-                else:
-                    stats[x] += 1
-            
-            if colour not in stats.keys():
-                stats[colour] = 1
-            else:
-                stats[colour] += 1
-
+            # apply refs
+            refs = self.apply_refs(properties)
             # gen nft
-            nfts[hex_hash] = {"props":properties, "colour":colour}
+            nfts[nft_mint_number] = {"meta":properties, "hex":hex_hash, "refs":refs}
+            nft_mint_number += 1
 
         print("Created " + str(self.max_mint) + " nfts")
         stats = {"stats":stats, "nfts":nfts}
-        write_json(NFT_MINT_STATS_JSON, stats)
-        self.nft_stats = stats
-        self.nft_data = nfts
+        write_json(NFT_MINT_STATS_FILE, stats)
+        write_json(NFT_MINT_DATA_FILE, nfts)
+        self.nft_set_stats = stats
+        self.nft_set_data = nfts
 
 
     def weight_inner(self):
         hex_hash = "0x"
 
-        properties = []
+        properties = {}
         # this loop generates nfts based of weight values for traits within each attribute
-        for attribute in ATTRIBUTES_WITH_WEIGHTS:
+        for attribute in self.variable_attributes:
             traits = [] 
             weights = []
-            for trait in self.nft_meta[attribute]:
+            for trait in self.nft_attributes[attribute]:
                 traits.append(trait)
-                weights.append(self.nft_meta[attribute][trait]["weight"])
+                weights.append(self.nft_traits[trait]["weight"])
             
             # select a weighted random trait
-            selection = random.choices(traits, weights)[0]
-            properties.append(selection)
-            
-            # find the traits attribute type
-            attribute_type = ""
-            for tmp in ATTRIBUTES_WITH_WEIGHTS:
-                if selection in self.nft_meta[tmp].keys():
-                    attribute_type = tmp
+            trait = random.choices(traits, weights)[0]
+            properties[attribute] = trait
 
             # convert the trait id to hexadecimal and append it to the hex_hash identifier, also add some padding
-            hex_hash += str(hex(self.nft_meta[attribute_type][selection]["id"])[2:]).zfill(2)
+            hex_hash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
             
-            # add random weighted colour here
-            traits = []
-            weights = []
-            for col in BASE_COLOUR_LIST:
-                traits.append(col)
-                weights.append(self.nft_meta["colour"][col]["weight"])
-            colour = random.choices(traits, weights)[0]
-            # add colour to hex hash
-            hex_hash += str(hex(self.nft_meta["colour"][colour]["id"])[2:]).zfill(2)
-
-        return hex_hash, properties, colour
+        return hex_hash, properties
 
     def str_to_64_char_arr(self, payload_str:str):
         payload_arr = []
@@ -465,80 +495,53 @@ class Bitbots:
         self.payload_meta[trait] = used_indices
         return
 
+    def nft_data_to_cardano(self):
+        for i in self.nft_set_data:
+            pass
+
 
     def gen_payload_meta(self):
-        print("payload meta")
-
-        #payload_number = 0;
         payload_str = ""
         self.payload_data = {}
-        # start svg data
+        
 
-        # color svg data
-
-        # 
-        #neck = self.payload_to_str( self.nft_meta["neck"]["neck"]["data"] )
-        # special
-        #head = self.payload_to_str( self.nft_meta["head"]["head"]["data"] )
-
-        """
-        svg_str = SVG_start + "\n" 
-        svg_str += style + "\n"
-        svg_str += inner_svg + "\n" + SVG_end
-        col = self.nft_data[n]["colour"]
-        style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
-        """
-        # payload 0
         # SVG start until color
         payload_str = ""
         payload_str += SVG_start
-        payload_str += COLOUR_STYLE_START
-        
+        payload_str += COLOUR_STYLE_START 
+
         # add start
-        self.append_payload(payload_str, 'colour')
+        self.append_payload(payload_str, 'startcolour')
+
         # add color
-        for c in self.nft_meta["colour"].keys():
+        for c in self.nft_attributes["colour"]:
             payload_str = c
             self.append_payload(payload_str, c)
 
         # end color
         self.append_payload(COLOUR_STYLE_END, 'endcolour')
 
-        
         # add neck
-        payload_str = self.nft_meta["neck"]["neck"]["data"]
-        self.append_payload(payload_str, "lobster")
+        #payload_str = self.nft_traits["neck"]["data"]
+        #self.append_payload(payload_str, "neck")
         
         # add the rest
-        order = ["special","hats", "ears", "mouths", "eyes"]
+        order = ["neck","special","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
-            for x in self.nft_meta[o].keys():
+            for x in self.nft_attributes[o]:
                 # check for duplicates
                 if x in known_traits:
                     raise Exception("Duplicate trait \'"+x+"\'! found in \'" + o + "\'")
                 known_traits.append(x)
                 # append payload
-                self.append_payload(self.nft_meta[o][x]["data"], x)
+                self.append_payload(self.nft_traits[x]["data"], x)
 
+        # apppend end
+        self.append_payload(SVG_end, 'end')
 
-
-        #payload_str = self.payload_to_str( self.nft_meta["special"]["lobster"]["data"] )
-        #self.append_payload(payload_str, "lobster")
-        # payload 
-
-
-        for x in self.nft_meta.keys():
-            print(x)
-
-
-        # 10kb array of line containing 64 chars i.e ["1...64","65...129","etc"] = 10kb
-        # 64 chars
-
-        # each 10kb is segregated into payloads
-        # meta says ada_eyes is payloads [5,6,7]
-        test = {"meta":self.payload_meta, "payload":self.payload_data}
-        write_json("payload-meta.json", test)
+        data = {"meta":self.payload_meta, "payload":self.payload_data}
+        write_json(NFT_PAYLOAD_FILE, data)
         
 
     def gen_721_policy(self):
@@ -580,6 +583,6 @@ class Bitbots:
 
     def size_test(self):
         # not accurate representation but just to get a feeling
-        json_str = json.dumps(self.nft_meta, ensure_ascii=False, indent=4)
+        json_str = json.dumps(self.nft_traits, ensure_ascii=False, indent=4)
         utf_size = len(json_str.encode('utf-8'))
         print("UTF size of meta file ~" + str(utf_size / 1000.0 ) + "kB")
