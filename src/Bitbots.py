@@ -39,7 +39,7 @@ WIRE_2_COLOUR_LIST = []
 WIRE_2_DARK_COLOUR_LIST = []
 
 # attribute order
-ATTRIBUTE_ORDER = ["neck", "head", "hats", "ears", "mouths", "eyes", "special"]
+ATTRIBUTE_ORDER = ["neck", "special", "head", "hats", "ears", "mouths", "eyes"]
 ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes", "special"]
 
 DEFAULT_WEIGHT = 1.0
@@ -57,6 +57,7 @@ DEFAULT_WEIGHT = 1.0
     #[ ] TODO ignore lobster, lobster is special mint parameter for airdrop to lobster contact 
     #[ ] TODO issue with normal ears
     #[ ] in 721 no_<item> is renamed to none
+    #[ ] todo NFT n that holds the colour payload will be PURE nft of said colour
 
     # Turn this file into business logic and server
     # Add API
@@ -65,6 +66,9 @@ DEFAULT_WEIGHT = 1.0
     # TODO turn the whole codebase into a class
     # TODO methods
     #       generate # does everything
+
+    # base64? figure out data types
+    #
 
 # functions-------------------------------------------------------------------
 def load_json(filepath):
@@ -78,7 +82,12 @@ def write_json(filepath, data):
         json.dump(data, f, ensure_ascii=False, indent=4)
     return
 
-# classes---------------------------------------------------------------------
+# Nft ------------------------------------------------------------------------
+class Nft:
+    def __init__():
+        pass
+
+# Bitbots --------------------------------------------------------------------
 class Bitbots:
     def __init__(self, max_mint:int=8192, max_payload_bytes:int=12000, reset:bool=True):
         self.max_mint = max_mint
@@ -89,6 +98,10 @@ class Bitbots:
         self.nft_attributes = {}
         self.nft_data = {}
         self.nft_mint_data = {} #metadata for mint
+
+        self.payload_meta = {} # about payload indices
+        self.payload_data = {} # payload data
+        self.payload_index = 0
         # generate nft
         self.generate(reset)
 
@@ -103,6 +116,10 @@ class Bitbots:
         
         self.make_svgs_from_nft_data()
         self.size_test()
+
+        # add Cardano stuff
+        self.gen_payload_meta()
+        self.gen_721()
 
     def clean(self):
         """ clean files """
@@ -189,6 +206,8 @@ class Bitbots:
                     data = svg_str
 
                     # segregate data into segments
+                    # TODO segments deprecated?
+                    """
                     segments = []
                     segment_count = 0
                     current_segment = ""
@@ -202,9 +221,10 @@ class Bitbots:
                     if current_segment != "":
                         segment_count += 1
                         segments.append(current_segment)
+                    """
 
                 # name the json entry
-                data = {"weight":DEFAULT_WEIGHT, "max":"","current":"","segments":segment_count,"id":item_number,"type":dir_name, "data":segments}
+                data = {"weight":DEFAULT_WEIGHT, "max":"","current":"","id":item_number,"type":dir_name, "data":data}
                 sub_items.append(file.replace('.svg',''))
                 sub_nft_data[file.replace('.svg','')] = data
             
@@ -216,12 +236,14 @@ class Bitbots:
             data = {}
             for i, col in enumerate(BASE_COLOUR_LIST):
                 data[col] = {"weight":"", "max":"","current":"","id":i,"type":"colour"}
-                self.nft_meta["colour"] = data    
+                self.nft_meta["colour"] = data
+
+            write_json(NFT_META_JSON, self.nft_meta)
 
     def make_svg(self, inner_svg:str, style:str, filename:str):
         """ create a svg file from given paramaters """
         #svg_str = XML_tag + "\n" + SVG_start + "\n" 
-        svg_str = "\n" + SVG_start + "\n" 
+        svg_str = SVG_start + "\n" 
         svg_str += style + "\n"
         svg_str += inner_svg + "\n" + SVG_end
 
@@ -230,6 +252,7 @@ class Bitbots:
     
 
     def payload_to_str(self, payload):
+        # TODO should be deprecated...
         data = ""
         for x in payload:
             data += x
@@ -240,12 +263,12 @@ class Bitbots:
         for n in self.nft_data:
 
             # make inner svg
-            neck = self.payload_to_str( self.nft_meta["neck"]["neck"]["data"] )
-            head = self.payload_to_str( self.nft_meta["head"]["head"]["data"] )
+            neck = self.nft_meta["neck"]["neck"]["data"]
+            head = self.nft_meta["head"]["head"]["data"]
 
             # TODO testing special
             special_attribute = self.nft_data[n]["props"][4]
-            special = self.payload_to_str( self.nft_meta["special"]["lobster"]["data"])
+            special = self.nft_meta["special"]["lobster"]["data"]
             inner_svg = neck + special + head
             #inner_svg = neck + head
             
@@ -255,7 +278,7 @@ class Bitbots:
                     break
 
                 trait = self.nft_data[n]["props"][i]
-                inner_svg += self.payload_to_str( self.nft_meta[attribute][trait]["data"] )
+                inner_svg += self.nft_meta[attribute][trait]["data"]
 
 
             # make style
@@ -361,6 +384,160 @@ class Bitbots:
             hex_hash += str(hex(self.nft_meta["colour"][colour]["id"])[2:]).zfill(2)
 
         return hex_hash, properties, colour
+
+    def str_to_64_char_arr(self, payload_str:str):
+        payload_arr = []
+        index = 0
+        current_str = ""
+
+        for c in payload_str:
+
+            if len(current_str) == 64:
+                payload_arr.append(current_str)
+                print()
+                current_str = ""
+                index = 0
+            
+            current_str += c
+            index += 1
+        
+        # add remaining (trailing i.e less than 64 chars) data
+        if current_str != "":
+            payload_arr.append(current_str)
+
+        return payload_arr
+
+    
+    def append_payload(self, payload_str:str , trait:str):
+        payload_arr = self.str_to_64_char_arr(payload_str)
+        print(len(payload_arr))
+        used_indices = []
+        #self.payload_meta
+
+        # TODO segregate payload arr
+        tmp_payload = []
+        payload_bytes = 0
+        print("len payload = ")
+        print(len(payload_arr))
+
+        RESET_VALUE = 128
+        payload_idx = 0
+
+        for row in payload_arr:
+            if payload_idx == RESET_VALUE:
+                self.payload_data[self.payload_index] = payload_arr
+                used_indices.append(self.payload_index)
+                self.payload_index += 1
+                tmp_payload = []
+                payload_idx = 0
+            
+            tmp_payload.append(row)
+            payload_idx += 1
+        
+        if tmp_payload != []:
+            self.payload_data[self.payload_index] = payload_arr
+            used_indices.append(self.payload_index)
+            self.payload_index += 1
+
+        self.payload_meta[trait] = used_indices
+        return
+
+
+    def gen_payload_meta(self):
+        print("payload meta")
+
+        #payload_number = 0;
+        payload_str = ""
+        self.payload_data = {}
+        # start svg data
+
+        # color svg data
+
+        # 
+        #neck = self.payload_to_str( self.nft_meta["neck"]["neck"]["data"] )
+        # special
+        #head = self.payload_to_str( self.nft_meta["head"]["head"]["data"] )
+
+        """
+        svg_str = SVG_start + "\n" 
+        svg_str += style + "\n"
+        svg_str += inner_svg + "\n" + SVG_end
+        col = self.nft_data[n]["colour"]
+        style = COLOUR_STYLE_START + "{fill: " + col + "}"+ COLOUR_STYLE_END
+        """
+        # payload 0
+        # SVG start until color
+        payload_str = ""
+        payload_str += SVG_start
+        payload_str += COLOUR_STYLE_START
+        
+        # add start
+        self.append_payload(payload_str, 'colour')
+        # add color
+        for c in self.nft_meta["colour"].keys():
+            payload_str = c
+            self.append_payload(payload_str, c)
+
+        # end color
+        self.append_payload(COLOUR_STYLE_END, 'endcolour')
+
+        
+        # add neck
+        payload_str = self.nft_meta["neck"]["neck"]["data"]
+        self.append_payload(payload_str, "lobster")
+        
+        # add the rest
+        order = ["special","hats", "ears", "mouths", "eyes"]
+        known_traits = []
+        for o in order:
+            for x in self.nft_meta[o].keys():
+                # check for duplicates
+                if x in known_traits:
+                    raise Exception("Duplicate trait \'"+x+"\'! found in \'" + o + "\'")
+                known_traits.append(x)
+                # append payload
+                self.append_payload(self.nft_meta[o][x]["data"], x)
+
+
+
+        #payload_str = self.payload_to_str( self.nft_meta["special"]["lobster"]["data"] )
+        #self.append_payload(payload_str, "lobster")
+        # payload 
+
+
+        for x in self.nft_meta.keys():
+            print(x)
+
+
+        # 10kb array of line containing 64 chars i.e ["1...64","65...129","etc"] = 10kb
+        # 64 chars
+
+        # each 10kb is segregated into payloads
+        # meta says ada_eyes is payloads [5,6,7]
+        test = {"meta":self.payload_meta, "payload":self.payload_data}
+        write_json("payload-meta.json", test)
+        
+
+    def gen_721_policy(self):
+        # check if we need new one
+        # get policy id
+
+        # policy 721
+        #   nft 1 <- note nft tag
+        #       tags: {ada_eyes, brain, etc}
+        #       src = {payloads [0,1,3,4,20,21,99,100]}
+        #   payload tag <- note payload tag
+        #       data = ["asdasdfds",asdfdsfasdfd,"asfdsdafdsa"]
+
+        pass
+
+    def gen_721(self):
+        self.gen_721_policy()
+        # using nft data
+        # using payload meta
+        # populate a 721 meta
+        # 0: policyid nft721 .... etc
+        pass 
 
     def nft_random_order(self):
         # for each hashtag in the set give it a random id
