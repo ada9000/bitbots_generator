@@ -84,8 +84,31 @@ def write_json(filepath, data):
 
 # Nft ------------------------------------------------------------------------
 class Nft:
-    def __init__():
-        pass
+    def __init__(self, policyid:str="TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc"):
+
+        self.policyid = policyid
+        self.nft_CIP = '721'
+        self.new_CIP = '696'
+
+    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[]):
+        meta = {self.nft_CIP:'', self.new_CIP:''}
+        # TODO note nft_references might be ints but json only allows string keys
+        # 721 
+        # notice the new CIP line
+        # TODO convert this to variables passed into method
+        nft_details = {
+            'project':'test',
+            'traits':{'eye':'ada_eye','hat':'brain'},
+            'description':'nft showcasing new CIP',
+            self.new_CIP: {'mediaType':'image/svg+xml','ref':nft_references}
+            }
+        meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
+
+        # new cip stuff
+        meta[self.new_CIP] = {self.policyid:{payload_ref:nft_payload}}
+        
+        print(json.dumps(meta, indent=4))
+
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
