@@ -109,7 +109,7 @@ class CardanoCliMintWrapper:
         else:
             self.first_run = False
             print("Not first run - not cleaning up")
-            self.policy_id =  read_file_return_data(self.policy_id_path)
+            self.policy_id =  read_file_return_data(self.policy_id_path)["id"]
             pass
 
 
@@ -229,10 +229,10 @@ class CardanoCliMintWrapper:
         res = cmd_out(cmd)
         self.policy_id = str(res).replace('b\'','').replace('\\n\'','')
         
-        text_file = open(self.policy_id_path, "w")
-        n = text_file.write(self.policy_id)
-        text_file.close()
-        #self.write_json(self.policy_id_path, {self.policy_id})
+        #text_file = open(self.policy_id_path, "w")
+        #n = text_file.write(self.policy_id)
+        #text_file.close()
+        self.write_json(self.policy_id_path, {"id":self.policy_id})
         #TODO CHECK POLICY ID HERE
 
         print("POLICY DEBUG: " + str(self.policy_id))
