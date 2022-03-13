@@ -56,6 +56,8 @@ class CardanoCliMintWrapper:
         self.meta_data_path     = FILES_DIR + "meta_data.json"
         self.protocol_path      = FILES_DIR + "protocol.json"
         self.recv_status_path   = FILES_DIR + "recv_status.json" # check recieved if crash or stop TODO
+        self.slot_path      = FILES_DIR + "slot.json"
+
 
         self.payment_addr_path  = WALLET_DIR + "payment.addr"
         self.payment_skey_path  = WALLET_DIR + "payment.skey"
@@ -187,7 +189,7 @@ class CardanoCliMintWrapper:
         # multiple expire time by 3600 seconds and add to amend inputed hours to the target slot
         self.target_slot = current_slot + ((expire_time) * 3600)
         print("SLOT DEBUG: Currentslot = " + str(current_slot) + " Target slot = " + str(self.target_slot) + " Diff = "+str((self.target_slot - current_slot)))
-
+        self.write_json(self.slot_path, {"slot":self.target_slot})
         return
 
 
@@ -238,7 +240,7 @@ class CardanoCliMintWrapper:
 
     def query_addr(self):
         # query address
-        cmd = "cardano-cli query utxo --address $(cat payment.addr) " + self.network
+        cmd = "cardano-cli query utxo --address $(cat " + self.payment_addr_path + ") " + self.network
         print(cmd)
         res = str(cmd_out(cmd))
         print(res)
@@ -279,7 +281,7 @@ class CardanoCliMintWrapper:
         #print("To mint in one transaction")
         amount = 1
         nft_mint_str = "\""
-        nft_mint_str = nft_mint_str + "1" + " " + self.policy_id + "." + NFT_ID
+        nft_mint_str = nft_mint_str + "1" + " " + self.policy_id + "." + nft_id
         nft_mint_str = nft_mint_str + " \""
 
         addr = str(self.payment_addr)
@@ -291,7 +293,14 @@ class CardanoCliMintWrapper:
         for i, x in enumerate(self.payment_utxos):
             if i < 1: #temp we must figure out how to add all utxo! TODO
                 tx_in = tx_in + " " + x + '#' + self.payment_utxos[x][0]
-
+        
+        # TODO check
+        if self.payment_utxos == {}:
+            tx_in = ""
+        
+        if self.target_slot == None:
+            self.target_slot = read_file_return_data(self.slot_path)["slot"]
+        
 
         ada_to_send = str(ada_to_send)
         # where output is change TODO
@@ -300,7 +309,7 @@ class CardanoCliMintWrapper:
         build_raw = "cardano-cli transaction build-raw " +\
         " --fee "+ fee +\
         " --tx-out " + recv_addr + "+" + ada_to_send + "+" + nft_mint_str +\
-        " --tx-out " + "$(cat payment.addr)" + "+" + output +\
+        " --tx-out " + "$(cat "+self.payment_addr_path+")" + "+" + output +\
         tx_in + \
         " --mint=" + nft_mint_str +\
         " --minting-script-file " + self.policy_script_path +\
@@ -383,8 +392,22 @@ class CardanoCliMintWrapper:
 
     def mint(self, meta_data_path, recv_addr):
         self.set_metadata(meta_data_path)
+        
+        fixed_meta = {}
+        for cip in self.meta_data.keys():
+            inner_keys = self.meta_data[cip].keys()
+            inner_data = {}
+            for i in inner_keys:
+                inner_data = self.meta_data[cip][i]
+            fixed_meta[cip] = {self.policy_id:inner_data}
+        
+        self.meta_data = fixed_meta
+        
+        k = self.meta_data["721"][self.policy_id].keys()
+        nft_id = ":)"
+        for i in k:
+            nft_id = i
 
-        nft_id = self.meta_data["721"][self.policy_id]
         print("NFT ID = " + str(nft_id))
 
         _ = input("paused press any key")       
@@ -409,7 +432,7 @@ class CardanoCliMintWrapper:
         ada_to_send = 1500000
         self.build_tx(fee=0, output=output, recv_addr=recv_addr, nft_id=nft_id, ada_to_send=ada_to_send)
         witness = "1"
-        cmd = "cardano-cli transaction calculate-min-fee --tx-body-file matx.raw --tx-in-count 1 --tx-out-count 1 --witness-count " + witness + " --testnet-magic 1097911063 --protocol-params-file protocol.json | cut -d \" \" -f1"
+        cmd = "cardano-cli transaction calculate-min-fee --tx-body-file matx.raw --tx-in-count 1 --tx-out-count 1 --witness-count " + witness + " --testnet-magic 1097911063 --protocol-params-file " + self.protocol_path + " | cut -d \" \" -f1"
         print(cmd)
         fee = cmd_out(cmd)
 
