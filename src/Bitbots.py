@@ -50,6 +50,9 @@ DEFAULT_WEIGHT = 1.0
 # [ ] NFT n that holds the colour payload will be PURE nft of said colour
 # [ ] Add secretes into svg?
 # [ ] Remove COPY_RIGHT comments
+# [ ] change input dir before realise
+
+INPUT_DIR = "../input-testnet" #TODO remove 
 
 
 # functions-------------------------------------------------------------------
