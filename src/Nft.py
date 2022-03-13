@@ -3,7 +3,7 @@ class Nft:
 
         self.policyid = policyid
         self.nft_CIP = '721'
-        self.new_CIP = '696'
+        self.new_CIP = '722'
 
     def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[], properties):
         # TODO note nft_references might be ints but json only allows string keys
