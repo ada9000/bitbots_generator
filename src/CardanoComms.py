@@ -84,10 +84,12 @@ class CardanoCliMintWrapper:
         files = [self.payment_addr_path, self.payment_skey_path, self.payment_vkey_path]
 
         if self.check_files_exist(files) == False:
+            raise Exception("missing " + str(files))
             return False # TODO ask user to generate new wallet?
+
         return True
 
-    def setup(self, metadata_filepath:str):
+    def setup(self):
         u_input = input("First run? y/n")
 
         if u_input is "y":
@@ -193,7 +195,8 @@ class CardanoCliMintWrapper:
 
     def generate_key_hash(self):
         # get key hash
-        res = cmd_out("cardano-cli address key-hash --payment-verification-key-file policy/policy.vkey")
+        cmd = "cardano-cli address key-hash --payment-verification-key-file " + self.policy_vkey_path
+        res = cmd_out(cmd)
         # stip unwanted chars from key_hash   
         self.key_hash = str(res).replace('b\'','').replace('\\n\'','')
 
