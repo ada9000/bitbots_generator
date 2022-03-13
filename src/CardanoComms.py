@@ -52,6 +52,7 @@ class CardanoCliMintWrapper:
         self.policy_script_path = FILES_DIR + "policy/policy.script"
         self.policy_vkey_path   = FILES_DIR + "policy/policy.vkey"
         self.policy_skey_path   = FILES_DIR + "policy/policy.skey"
+        self.policy_id_path   = FILES_DIR + "policy/policy_id.txt"
         self.meta_data_path     = FILES_DIR + "meta_data.json"
         self.protocol_path      = FILES_DIR + "protocol.json"
         self.recv_status_path   = FILES_DIR + "recv_status.json" # check recieved if crash or stop TODO
@@ -74,9 +75,6 @@ class CardanoCliMintWrapper:
         self.nft_ids = []
 
         self.payment_utxos = None
-
-
-
         self.first_run = True
 
 
@@ -230,7 +228,11 @@ class CardanoCliMintWrapper:
         print(cmd)
         res = cmd_out(cmd)
         self.policy_id = str(res).replace('b\'','').replace('\\n\'','')
-
+        
+        text_file = open(self.policy_id_path, "w")
+        n = text_file.write(self.policy_id)
+        text_file.close()
+        #self.write_json(self.policy_id_path, {self.policy_id})
         #TODO CHECK POLICY ID HERE
 
         print("POLICY DEBUG: " + str(self.policy_id))
