@@ -9,6 +9,8 @@ import base64
 import random
 import re
 import sys
+# local files
+from Nft import *
 
 # consts ---------------------------------------------------------------------
 INPUT_DIR = "../input"
@@ -44,7 +46,7 @@ DEFAULT_WEIGHT = 1.0
 # [ ] fix artifacts in svg's
 # [ ] rename meta items (remove underscore etc)
 # [ ] no_<attribute> is renamed to none in metadata
-# [ ] ensure only 503 are lobsters (and these are giveaways)
+# [ ] ensure only 503 are lobsters (and these are giveaways) https://cardanoscan.io/tokenPolicy/cc7888851f0f5aa64c136e0c8fb251e9702f3f6c9efcf3a60a54f419
 # [ ] NFT n that holds the colour payload will be PURE nft of said colour
 
 
@@ -59,55 +61,6 @@ def write_json(filepath, data):
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     return
-
-# Nft ------------------------------------------------------------------------
-class Nft:
-    def __init__(self, policyid:str="todo"):
-
-        self.policyid = policyid
-        self.nft_CIP = '721'
-        self.new_CIP = '696'
-
-    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[], properties):
-        # TODO note nft_references might be ints but json only allows string keys
-        meta = {}
-        # 721 
-        # notice the new CIP line
-        # TODO convert this to variables passed into method
-        nft_details = {
-            'project':'Copyright Bitbots.art 2022',
-            'traits':properties,
-            'description':'nft showcasing new CIP',
-            self.new_CIP: {'mediaType':'image/svg+xml','ref':nft_references}
-            }
-        #meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
-
-        if nft_payload != None:
-            # include new CIP payload
-            meta = {
-                self.nft_CIP:{
-                    self.policyid:{
-                        nft_name:nft_details
-                        }
-                    }, 
-                self.new_CIP:{
-                    self.policyid:{
-                        payload_ref:nft_payload
-                        }
-                    }
-                }
-        else:
-            # ignore new CIP payload
-            meta = {
-                self.nft_CIP:{
-                    self.policyid:{
-                        nft_name:nft_details
-                        }
-                    }
-                }
-        
-        return meta
-
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
