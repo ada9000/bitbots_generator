@@ -229,11 +229,7 @@ class CardanoCliMintWrapper:
         res = cmd_out(cmd)
         self.policy_id = str(res).replace('b\'','').replace('\\n\'','')
         
-        #text_file = open(self.policy_id_path, "w")
-        #n = text_file.write(self.policy_id)
-        #text_file.close()
         self.write_json(self.policy_id_path, {"id":self.policy_id})
-        #TODO CHECK POLICY ID HERE
 
         print("POLICY DEBUG: " + str(self.policy_id))
 
@@ -388,6 +384,9 @@ class CardanoCliMintWrapper:
     def mint(self, meta_data_path, recv_addr):
         self.set_metadata(meta_data_path)
 
+        nft_id = self.meta_data["721"][self.policy_id]
+        print("NFT ID = " + str(nft_id))
+
         _ = input("paused press any key")       
 
         os.system("clear")
@@ -408,7 +407,7 @@ class CardanoCliMintWrapper:
 
         # build 1
         ada_to_send = 1500000
-        self.build_tx(fee=0, output=output, recv_addr=recv_addr, nft_id=NFT_ID, ada_to_send=ada_to_send)
+        self.build_tx(fee=0, output=output, recv_addr=recv_addr, nft_id=nft_id, ada_to_send=ada_to_send)
         witness = "1"
         cmd = "cardano-cli transaction calculate-min-fee --tx-body-file matx.raw --tx-in-count 1 --tx-out-count 1 --witness-count " + witness + " --testnet-magic 1097911063 --protocol-params-file protocol.json | cut -d \" \" -f1"
         print(cmd)
@@ -437,7 +436,7 @@ class CardanoCliMintWrapper:
         print("ADA attached: " + str(ada_to_send))
 
         # build 2
-        self.build_tx(fee=fee, output=output, recv_addr=recv_addr, nft_id=NFT_ID, ada_to_send=ada_to_send)
+        self.build_tx(fee=fee, output=output, recv_addr=recv_addr, nft_id=nft_id, ada_to_send=ada_to_send)
 
         #sign
         self.sign_tx()
