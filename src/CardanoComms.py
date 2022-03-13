@@ -383,7 +383,7 @@ class CardanoCliMintWrapper:
         return
 
 
-    def mint(self, meta_data_path, recv_address):
+    def mint(self, meta_data_path, recv_addr):
         self.set_metadata(meta_data_path)
 
         _ = input("paused press any key")       
@@ -399,7 +399,7 @@ class CardanoCliMintWrapper:
 
         print("Minting <<<<<<<<<<<<<<<<<")
         self.find_payment_utxos()
-        x_costs = (len(recv_addresses) * (int(output)+170000)) /1000000
+        x_costs = (int(output)+170000) /1000000
         print("Total cost will be ~" + str(x_costs)+ "ADA")
         
         asdf = input("continue?")
