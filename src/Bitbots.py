@@ -118,13 +118,15 @@ class Bitbots:
         self.update_weights()
         # add payload refs
         self.gen_payload_meta()
+        log_info("Payload count is " + str(self.payload_index))
+        if self.max_mint < self.payload_index:
+            raise Exception(str(self.payload_index) + " nfts required but max mint is " + str(self.payload_index))
         # create a random nft set!
         self.generate_random_set()
         # populate output with svgs
         self.svg_from_nft_data()
         # create nft that conforms to CIP's
         self.create_cardano_nft()
-        log_info("Payload count is " + str(self.payload_index))
 
 
     def clean(self):
