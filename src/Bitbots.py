@@ -48,6 +48,8 @@ DEFAULT_WEIGHT = 1.0
 # [ ] no_<attribute> is renamed to none in metadata
 # [ ] ensure only 503 are lobsters (and these are giveaways) https://cardanoscan.io/tokenPolicy/cc7888851f0f5aa64c136e0c8fb251e9702f3f6c9efcf3a60a54f419
 # [ ] NFT n that holds the colour payload will be PURE nft of said colour
+# [ ] Add secretes into svg?
+# [ ] Remove COPY_RIGHT comments
 
 
 # functions-------------------------------------------------------------------
@@ -357,6 +359,11 @@ class Bitbots:
         update the self.payload_meta
         update the self.payload_data
         """
+        # TODO remove later this just adds copy rights for initial tests
+        COPY_RIGHT = "<!-- COPYRIGHT bitbots.art pixelpool.io 2022 -->"
+        payload_str = COPY_RIGHT + payload_str
+        # TODO deprecate above before release
+
         # convert string to array 
         payload_arr = self.str_to_64_char_arr(payload_str)
         # define vars
