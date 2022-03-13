@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from subprocess import Popen, PIPE, STDOUT
+import subprocess
 import time
 
 
@@ -15,6 +16,8 @@ EMPTY_BYTE_STRING = "b\'\'"
 
 FILES_DIR = "../files/"
 WALLET_DIR = FILES_DIR + "wallet/"
+
+CARDANO_CLI_PATH = "cardano-cli"
 
 #-----------------------------------------------------------------------------
 def cmd_out(cmd):
@@ -80,6 +83,11 @@ class CardanoCliMintWrapper:
         self.first_run = True
 
 
+        self.lace = None
+        self.transactions = None
+        self.nfts = None
+
+
     def setup_checks(self):
         files = [self.payment_addr_path, self.payment_skey_path, self.payment_vkey_path]
 
@@ -90,9 +98,10 @@ class CardanoCliMintWrapper:
         return True
 
     def setup(self):
-        u_input = input("First run? y/n")
+        #u_input = input("First run? y/n\n> ")
+        #if u_input is "y": # 
 
-        if u_input is "y":
+        if False:# notice u_input
             print("Cleaning before run...")
             self.clean()
 
@@ -252,24 +261,65 @@ class CardanoCliMintWrapper:
             res = res.replace(item, '')
 
         return res.split()
-    
+
+    def replace_b_str(self, msg):
+        msg = str(msg)
+        msg = msg.replace('b\'','')
+        msg = msg.replace('\'','')
+        return msg
 
     def find_payment_utxos(self):
-        print("UTXO HASH DEBUG:")
-        utxos = self.query_addr()
+        cmd = "cat " + self.payment_addr_path
+        print(cmd)
+        addr = str(cmd_out(cmd))
+        addr = addr.replace('b\'','')
+        addr = addr.replace('\'','')
+        print(addr)
 
-        # get all tx hashes
-        hashes = {}
-        for i, line in enumerate(utxos):
-            if len(line) == 64: #64 chars in a hash
-                inner = []
-                j = i + 1
-                while (j < len(utxos) and len(utxos[j]) != 64):
-                    inner.append(utxos[j])
-                    j = j + 1
-                hashes[line] = inner
+        cmd = "cardano-cli query utxo --address $(cat " + self.payment_addr_path + ") " + self.network
+        print("AAAAAAAA")
+        rawUtxoTable = cmd_out(cmd)
+        utxoTableRows = rawUtxoTable.strip().splitlines()
+        totalLovelaceRecv = 0
+        isPaymentComplete = False
+        print("BBBBBBB")
+        
+        nfts = []
+        transactions = []
 
-        self.payment_utxos = hashes
+        print(utxoTableRows)
+        for x in range(2, len(utxoTableRows)):
+            cells = utxoTableRows[x].split()
+
+            utxo_has_nft = False
+            for i, cell in enumerate(cells):
+                cell = self.replace_b_str(cell)
+                print(cell)
+                if cell == '+':
+                    if i+2 < len(cells):
+                        utxo_has_nft = True
+                        nfts.append(
+                            (self.replace_b_str(cells[i+1]), self.replace_b_str(cells[i+2]))
+                            )
+
+            if utxo_has_nft == False:
+                totalLovelaceRecv +=  int(cells[2])
+
+            transactions.append(
+                (self.replace_b_str(cells[0]), self.replace_b_str(cells[1]), utxo_has_nft) 
+                )
+            # figure out TODO
+            print("cells="+str(cells))
+            print("")
+            print("")
+
+            print("txs:\n"  + str(transactions))
+            print("nfts:\n"  + str(nfts))
+        
+        print("lace = " + str(totalLovelaceRecv))
+        self.lace = totalLovelaceRecv
+        self.transactions = transactions
+        self.nfts = nfts
         return
 
     
@@ -289,10 +339,21 @@ class CardanoCliMintWrapper:
         output = str(output)
         
         # get tx in #TODO
-        tx_in = " --tx-in "
-        for i, x in enumerate(self.payment_utxos):
-            if i < 1: #temp we must figure out how to add all utxo! TODO
-                tx_in = tx_in + " " + x + '#' + self.payment_utxos[x][0]
+        tx_in = ""
+        for tx_id, tx_hash, contains_nft in self.transactions:
+            if contains_nft == False:
+                tx_in += " --tx-in " + tx_id + "#" + tx_hash
+
+
+
+
+        tx_out_save = " --tx-out " + "$(cat "+self.payment_addr_path+")" + "+" + output
+        #if len(self.nfts) > 0:
+        #    tx_out_save = " --tx-out "
+        #    tx_out_save += str(self.payment_addr) + "+" + output
+        #    for nft_amount, nft_hash in self.nfts:
+        #        tx_out_save +=  "+\"" + str(nft_amount) + " " + str(nft_hash) + "\""
+
         
         # TODO check
         if self.payment_utxos == {}:
@@ -309,7 +370,7 @@ class CardanoCliMintWrapper:
         build_raw = "cardano-cli transaction build-raw " +\
         " --fee "+ fee +\
         " --tx-out " + recv_addr + "+" + ada_to_send + "+" + nft_mint_str +\
-        " --tx-out " + "$(cat "+self.payment_addr_path+")" + "+" + output +\
+        tx_out_save +\
         tx_in + \
         " --mint=" + nft_mint_str +\
         " --minting-script-file " + self.policy_script_path +\
@@ -336,9 +397,6 @@ class CardanoCliMintWrapper:
 
     def get_funds(self):
         funds = 0
-        for x in self.payment_utxos:
-            funds = funds + int(self.payment_utxos[x][1])
-        print()
         return funds
 
 
@@ -430,20 +488,20 @@ class CardanoCliMintWrapper:
 
         # build 1
         ada_to_send = 1500000
-        self.build_tx(fee=0, output=output, recv_addr=recv_addr, nft_id=nft_id, ada_to_send=ada_to_send)
+        self.build_tx(fee="0", output=output, recv_addr=recv_addr, nft_id=nft_id, ada_to_send=ada_to_send)
         witness = "1"
         cmd = "cardano-cli transaction calculate-min-fee --tx-body-file matx.raw --tx-in-count 1 --tx-out-count 1 --witness-count " + witness + " --testnet-magic 1097911063 --protocol-params-file " + self.protocol_path + " | cut -d \" \" -f1"
         print(cmd)
         fee = cmd_out(cmd)
 
         fee = str(fee).replace('b\'','').replace('\\n\'','')
-        funds = self.get_funds()
+        funds = self.lace
         
         if i != 0:
             while last_funds == funds:
                 print("fund calc error... trying again")
                 self.find_payment_utxos()
-                funds = self.get_funds()
+                funds = self.lace
                 time.sleep(5)
 
                 
@@ -451,11 +509,16 @@ class CardanoCliMintWrapper:
 
         fund_i = int(funds)
         fee_i = int(fee)
-        output = int(funds) - int(fee_i) - int(ada_to_send)
+        output = int(funds) - int(fee_i) - int(ada_to_send) # TODO HERE
+        # 
+        print("Output A: " + str(output))
+        #if len(self.nfts) > 0:
+        #    output = str( int(output) - int(ada_to_send) )
+
         output = str(output)
         print("Funds: " + str(funds))
         print("Fee: " + fee)
-        print("Output: " + output)
+        print("Output B: " + output)
         print("ADA attached: " + str(ada_to_send))
 
         # build 2
@@ -481,3 +544,5 @@ if __name__ == "__main__":
     cli_wrap = CardanoCliMintWrapper()
     #cli_wrap.clean()
     cli_wrap.setup()
+
+    cli_wrap.mint("../output/0004.json", "addr_test1qz9t6ykv3sl2dgulxv4efer4kue4k7jx8w2qrnldd694fzvjcfp434vp7hl82exe6nul2vf5d342wldhss4svegh03qs6eursz")
