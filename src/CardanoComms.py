@@ -109,7 +109,7 @@ class CardanoCliMintWrapper:
         else:
             self.first_run = False
             print("Not first run - not cleaning up")
-            self.policy_id =  read_file_return_data(self.policy_path)
+            self.policy_id =  read_file_return_data(self.policy_id_path)
             pass
 
 
