@@ -4,6 +4,7 @@ class Nft:
         self.policyid = policyid
         self.nft_CIP = '721'
         self.new_CIP = '722'
+        # mime: data:image/svg+xml;utf8
 
     def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[], properties):
         # TODO note nft_references might be ints but json only allows string keys
@@ -15,7 +16,7 @@ class Nft:
             'project':'Copyright Bitbots.art 2022',
             'traits':properties,
             'description':'nft showcasing new CIP',
-            self.new_CIP: {'mediaType':'image/svg+xml','ref':nft_references}
+            self.new_CIP: {'mediaType':'image/svg+xml;utf8,','ref':nft_references}
             }
         #meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
 
