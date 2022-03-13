@@ -72,7 +72,7 @@ def log_info(msg:str):
     msg = " " + COLOR_CYAN + msg + COLOR_RESET
     logging.info(msg)
 
-def load_json(filepath):
+def read_file_return_data(filepath):
     data = {}
     with open(filepath) as f:
         data = json.load(f)
@@ -252,7 +252,7 @@ class Bitbots:
         # init weights load them if they exists
         weights = {}
         if os.path.isfile(NFT_WEIGHTS_FILE):
-            weights = load_json(NFT_WEIGHTS_FILE)
+            weights = read_file_return_data(NFT_WEIGHTS_FILE)
         
         # update weights for all traits
         for trait in self.nft_traits.keys():
