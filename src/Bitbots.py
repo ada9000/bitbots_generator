@@ -11,18 +11,20 @@ import re
 import sys
 # local files
 from Nft import *
+# use logging
+import logging
+logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 # consts ---------------------------------------------------------------------
+# files
 INPUT_DIR = "../input"
 OUTPUT_DIR = "../output/"
 NFT_TRAIT_META_FILE = "nft-trait-meta.json"
 NFT_ATTRIBUTES_META_FILE = "nft-attributes-meta.json"
 NFT_WEIGHTS_FILE = "nft-weights.json"
 NFT_PAYLOAD_FILE = "nft-payload.json"
-
 NFT_MINT_DATA_FILE = "nft-mint-data.json"
 NFT_MINT_STATS_FILE = OUTPUT_DIR + "_nft-mint-stats.json"
-
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
 SVG_start = '<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
@@ -33,13 +35,16 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
-
-# attribute order
-ATTRIBUTE_ORDER = ["neck", "special", "head", "hats", "ears", "mouths", "eyes"]
-ATTRIBUTES_WITH_WEIGHTS = ["hats", "ears", "mouths", "eyes"]
-
+# logging colours
+COLOR_RESET = '\033[0m'
+COLOR_CYAN = '\033[0;36m'
+COLOR_YELLOW = '\033[1;33m'
+COLOR_RED = '\033[1;31m'
+# Variable
 DEFAULT_WEIGHT = 1.0
-
+MINT_MAX = 8192
+MAX_PAYLOAD_BYTES = 14000
+#-----------------------------------------------------------------------------
 # TODO
 # [ ] implent id special tag
 # [ ] implent tally
@@ -52,10 +57,21 @@ DEFAULT_WEIGHT = 1.0
 # [ ] Remove COPY_RIGHT comments
 # [ ] change input dir before realise
 
-INPUT_DIR = "../input-testnet" #TODO remove 
+# TODO deprecate later for testing
+#INPUT_DIR = "../input-testnet" #TODO remove
+MINT_MAX = 200 # TODO remove
 
 
 # functions-------------------------------------------------------------------
+def log_debug(msg:str):
+    msg = " " + COLOR_YELLOW + msg + COLOR_RESET
+    logging.debug(msg)
+    pass
+
+def log_info(msg:str):
+    msg = " " + COLOR_CYAN + msg + COLOR_RESET
+    logging.info(msg)
+
 def load_json(filepath):
     data = {}
     with open(filepath) as f:
@@ -69,7 +85,7 @@ def write_json(filepath, data):
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
-    def __init__(self, max_mint:int=8192, max_payload_bytes:int=12000, reset:bool=True):
+    def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, reset:bool=True):
         # vars
         self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colour_lst = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff", "#ebda46", "#696969"]
@@ -108,7 +124,7 @@ class Bitbots:
         self.svg_from_nft_data()
         # create nft that conforms to CIP's
         self.create_cardano_nft()
-        print("Payload count is " + str(self.payload_index))
+        log_info("Payload count is " + str(self.payload_index))
 
 
     def clean(self):
@@ -302,7 +318,7 @@ class Bitbots:
         # update set data with new nfts and save to file
         self.nft_set_data = nfts
         write_json(NFT_MINT_DATA_FILE, nfts)
-        print("Created " + str(self.max_mint) + " nfts")
+        log_info("Created " + str(self.max_mint) + " nfts")
 
 
     def gen_random_props(self):
@@ -373,21 +389,27 @@ class Bitbots:
         used_indices = []
         tmp_payload = []
         payload_bytes = 0
-        RESET_VALUE = 128 # 128 rows
+        RESET_VALUE = 128# 128 rows
         line_count = 0
-        # for each row of 64 in the payload array
+        # for each row of 64 in the payload array TODO fix
         for row in payload_arr:
-            if line_count == RESET_VALUE:
-                self.payload_data[self.payload_index] = payload_arr
+            if line_count >= RESET_VALUE:
+                log_debug("Payload for \'" + trait +"\' stored in idx " + str(self.payload_index))
+                self.payload_data[self.payload_index] = tmp_payload
                 used_indices.append(self.payload_index)
                 self.payload_index += 1 # global index for payloads
                 tmp_payload = []
                 line_count = 0
+                # remove used from payload_arr
+
+
             tmp_payload.append(row)
             line_count += 1
+
         # append any data left if we didn't finish on a RESET_VALUE
         if tmp_payload != []:
-            self.payload_data[self.payload_index] = payload_arr
+            log_debug("Payload for \'" + trait +"\' stored in idx " + str(self.payload_index))
+            self.payload_data[self.payload_index] = tmp_payload
             used_indices.append(self.payload_index)
             self.payload_index += 1
         # allow the trait value to point to the 'block# indices
@@ -459,9 +481,12 @@ class Bitbots:
                 nft_payload = self.payload_data[i]
 
             props = self.nft_set_data[nft_name]["meta"]
-
             cardano_meta = n.generate_nft(nft_name=nft_name, payload_ref=i, nft_payload=nft_payload, nft_references=payload_refs, properties=props)
             self.cardano_nft_meta[nft_name] = cardano_meta
             #
             f = OUTPUT_DIR + nft_name + ".json"
             write_json(f, cardano_meta)
+            # check file size
+            s = os.path.getsize(f)
+            if s > MAX_PAYLOAD_BYTES:
+                raise Exception("File \'" + f + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
