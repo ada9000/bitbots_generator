@@ -54,6 +54,11 @@ def check_files_exist(self, files:list):
 
 
 #-----------------------------------------------------------------------------
+# TODO make concurrent
+# [ ] ensure matx.raw and matx.signed are made conccurent i.e not read at the same time by diff processes
+# [ ] ensure mutex is placed over each nft
+
+#-----------------------------------------------------------------------------
 class Wallet:
     def __init__(self, name:str='', network:str=TESTNET):
         self.network    = network
