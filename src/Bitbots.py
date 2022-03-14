@@ -11,9 +11,7 @@ import re
 import sys
 # local files
 from Nft import *
-# use logging
-import logging
-logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+from Utility import *
 
 # consts ---------------------------------------------------------------------
 # files
@@ -58,30 +56,9 @@ MAX_PAYLOAD_BYTES = 14000
 # [ ] change input dir before realise
 
 # TODO deprecate later for testing
-#INPUT_DIR = "../input-testnet" #TODO remove
+INPUT_DIR = "../input-testnet" #TODO remove
 MINT_MAX = 200 # TODO remove
 
-
-# functions-------------------------------------------------------------------
-def log_debug(msg:str):
-    msg = " " + COLOR_YELLOW + msg + COLOR_RESET
-    logging.debug(msg)
-    pass
-
-def log_info(msg:str):
-    msg = " " + COLOR_CYAN + msg + COLOR_RESET
-    logging.info(msg)
-
-def read_file_return_data(filepath):
-    data = {}
-    with open(filepath) as f:
-        data = json.load(f)
-    return data
- 
-def write_json(filepath, data):
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-    return
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
