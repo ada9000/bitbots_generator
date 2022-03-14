@@ -6,7 +6,7 @@ class Nft:
         self.new_CIP = '722'
         # mime: data:image/svg+xml;utf8
 
-    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:[], nft_references:[], properties):
+    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:list, nft_references:list, properties):
         # TODO note nft_references might be ints but json only allows string keys
         meta = {}
         # 721 
