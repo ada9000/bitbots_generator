@@ -31,7 +31,7 @@ def cmd_out(cmd):
     # if error raise exception
     error_str = "Error"
     if error_str in str(res):
-        raise Exception("Error", str(res))
+        log_error("Error" + str(res))
     return res
 
 def replace_b_str(msg):
@@ -318,8 +318,7 @@ class CardanoComms:
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
         # send
-        self.submit_tx(recv_addr=recv_addr, wallet=mint_wallet)
-        return True
+        return self.submit_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
 
 
     def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path):
@@ -382,27 +381,35 @@ class CardanoComms:
         return True
 
 
-    def submit_tx(self, recv_addr:str, wallet:Wallet):
+    def submit_tx(self, recv_addr:str, wallet:Wallet, nft_id:str):
         cmd = "cardano-cli transaction submit"+\
             " --tx-file " + wallet.tx_signed + " " + self.network
         res = cmd_out(cmd)
         res = replace_b_str(res)
         res = res.replace('\n','')
         log_info(res)
+        if 'BadImputsUTxO' in res:
+            log_error("BadImputsUTxO")
+            return False
+        if 'ValueNotConservedUTxO' in res:
+            log_error("ValueNotConservedUTxO")
+            return False
         transaction_sent = False
         idx = 0
         while not transaction_sent:
             cmd = "cardano-cli query utxo --address "+ recv_addr + " " + self.network
             #print(cmd)
             res = cmd_out(cmd)
-            if str(self.policy_id) in str(res):
+            target = self.policy_id + "." + nft_id
+            target.strip() # remove any whitespace
+            if target in str(res):
                 transaction_sent = True
-                log_info("found tx, mint success \'" + self.policy_id + "\'") #TODO do I need to check for policyid.nftnumber
+                log_info("found tx, mint success \'" + target + "\'") #TODO do I need to check for policyid.nftnumber
             else:
                 log_debug("tx not found waiting waiting..." + str(idx))
                 time.sleep(5)
                 idx += 1
-        return
+        return True
 
 # Refund manger class
 # Mint manger class
@@ -417,4 +424,13 @@ if __name__ == "__main__":
     wallet = Wallet()
     wallet.update_utxos()
     cc = CardanoComms(TESTNET, False)
-    cc.mint_nft(metadata_path="../output/0013.json", recv_addr=wallet.addr, mint_wallet=wallet)
+
+    # check the blockchain to see if nft exists if so don't mint
+    # might have to use blockfrost
+
+    idx = "0018"
+    meta_path = "../output/"+idx+".json"
+    res = cc.mint_nft(metadata_path=meta_path, recv_addr=wallet.addr, mint_wallet=wallet)
+    while res == False:
+        input("Bad mint try again\nPress any key...")
+        res = cc.mint_nft(metadata_path=meta_path, recv_addr=wallet.addr, mint_wallet=wallet)
