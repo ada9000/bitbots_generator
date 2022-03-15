@@ -19,6 +19,10 @@ def log_info(msg:str):
     msg = " " + COLOR_CYAN + msg + COLOR_RESET
     logging.info(msg)
 
+def log_error(msg:str):
+    msg = " " + COLOR_RED + msg + COLOR_RESET
+    logging.info(msg)
+
 def read_file_return_data(filepath):
     data = {}
     with open(filepath) as f:
