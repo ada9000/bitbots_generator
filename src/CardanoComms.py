@@ -6,10 +6,10 @@ import json
 from subprocess import Popen, PIPE, STDOUT
 import subprocess
 import time
-
-
 from Bitbots import *
 import re
+from dotenv import load_dotenv
+from blockfrost import BlockFrostApi, ApiError, ApiUrls
 
 #-----------------------------------------------------------------------------
 MAINNET = "--mainnet"
@@ -22,6 +22,7 @@ POLICY_DIR = FILES_DIR + "policy/"
 WALLET_DIR = FILES_DIR + "wallet/"
 
 CARDANO_CLI_PATH = "cardano-cli"
+
 
 # functions ------------------------------------------------------------------
 def cmd_out(cmd):
@@ -413,13 +414,73 @@ class CardanoComms:
 
 # Refund manger class
 # Mint manger class
+class BlockFrostTools:
+    def __init__(self, network:str=TESTNET):
+        # set network url
+        self.b_url = ApiUrls.testnet.value
+        if network == MAINNET:
+            self.b_url = ApiUrls.mainnet.value
+        # get api key from .env
+        load_dotenv()
+        self.api_key = os.getenv('BLOCK_FROST_API_KEY')
+        if self.api_key is None:
+            raise Exception("No blockfrost api key. Update .env")
+        # init api
+        self.api = BlockFrostApi(
+            project_id=self.api_key,
+            base_url=self.b_url
+        )
+        self.health = self.health_query()
+
+    def health_query(self):
+        return self.api.health()
+
+    def sender_query(self, txhash:str):
+        res = self.api.transaction_utxos(hash=txhash)
+        print("inputs")
+        print(res.inputs)
+        for i in res.inputs:
+            print(i.address)
+
+        print(" . . .")
+        for i in res.outputs:
+            a = i.address
+            amount = i.amount
+            for x in amount:
+                print(a)
+                print(x)
+                print(x.quantity)
+                print(x.unit)
+
+        #print("outputs")
+        #print(res.inputs)
+
+
+    def utxo_query(self, txhash:str):
+        res = self.api.transaction_utxos(hash=txhash)
+        print(res)
+
+    def addr_query(self, addr:str):
+        address = self.api.address(address=addr)
+        print(address)
+        print(address.type)  # prints 'shelley'
+
 
 if __name__ == "__main__":
-    print("Running tests")
 
     cmd = "cat ../files/wallet/base.addr" 
     addr = replace_b_str(cmd_out(cmd))
-    print(addr)
+
+    b = BlockFrostTools(TESTNET)
+    #b.addr_query(addr)
+
+    tx = "95a8b663563c111c19900da01157cc893113ad6c9e6130157c8dc0043390467d"
+    tx = "cd2e514f926671d514c427bc8a0205b0e7506b443665d0121cf919b47fd1b683"
+    b.sender_query(tx)
+    """
+    breakpoint()
+    print("Running tests")
+
 
     wallet = Wallet()
     wallet.update_utxos()
@@ -427,6 +488,7 @@ if __name__ == "__main__":
 
     # check the blockchain to see if nft exists if so don't mint
     # might have to use blockfrost
+    # NOT smart blockchain or query could be off resulting in duplicates, best to do that backend here
 
     idx = "0018"
     meta_path = "../output/"+idx+".json"
@@ -434,3 +496,4 @@ if __name__ == "__main__":
     while res == False:
         input("Bad mint try again\nPress any key...")
         res = cc.mint_nft(metadata_path=meta_path, recv_addr=wallet.addr, mint_wallet=wallet)
+    """
