@@ -10,19 +10,21 @@ from Bitbots import *
 import re
 from dotenv import load_dotenv
 from blockfrost import BlockFrostApi, ApiError, ApiUrls
+from threading import Thread, Lock
+import time
 
-#-----------------------------------------------------------------------------
+# consts ---------------------------------------------------------------------
 MAINNET = "--mainnet"
 TESTNET = "--testnet-magic 1097911063"
 NETWORKS = [MAINNET, TESTNET]
-EMPTY_BYTE_STRING = "b\'\'"
-
 FILES_DIR = "../files/"
 POLICY_DIR = FILES_DIR + "policy/"
 WALLET_DIR = FILES_DIR + "wallet/"
-
 CARDANO_CLI_PATH = "cardano-cli"
+EMPTY_BYTE_STRING = "b\'\'"
 
+# global ---------------------------------------------------------------------
+purchase_mutex = Lock()
 
 # functions ------------------------------------------------------------------
 def cmd_out(cmd):
@@ -51,6 +53,12 @@ def replace_b_str(msg):
     msg = msg.replace('[','')
     msg = msg.replace(']','')
     return msg
+
+def ada_to_lace(x:float):
+    return x * 1000000
+
+def lace_to_ada(x:float):
+    return x / 1000000
 
 def check_files_exist(self, files:list):
     """
@@ -95,7 +103,7 @@ class Wallet:
         self.lace = 0
         self.nfts = []
         self.txs  = []
-        
+    
     def update_utxos(self):
         # query utxo
         cmd = "cardano-cli query utxo --address " + self.addr + " " + self.network
@@ -110,6 +118,8 @@ class Wallet:
         txs = []
         # get transaction index
         for tx_idx in range(len(utxos)):
+            # tx lace tracks lace in current tx
+            tx_lace = 0
             # get utxo from utxos
             utxo = utxos[tx_idx].split()
             # remove unwanted characters, cardano-cli is strict on whitespace
@@ -129,19 +139,32 @@ class Wallet:
             # ignore transactions with nfts in available lace
             if utxo_has_nft == False:
                 lace_available += int(utxo[2])
+            tx_lace = int(utxo[2])
             # calc total lace by adding lace attached to each uxto
             lace_total += int(utxo[2])
             # append all transactions with a boolean to announce nft present
-            txs.append( (utxo[0], utxo[1], utxo_has_nft) )
+            txs.append( (utxo[0], utxo[1], tx_lace, utxo_has_nft) )
         # log and assign
         log_debug("addr  : " + self.addr)
         log_debug("lace  : " + str(lace_available))
         log_debug("total : " + str(lace_total))
         self.lace   = lace_available
         self.txs    = txs
-        # return type is [(tx_hash:str, tx_id:str, contains_nft:bool),...]
+        # return type is [(tx_hash:str, tx_id:str, tx_lace, contains_nft:bool),...]
         return self.txs
 
+    def look_for_lace(self, lace):
+        while True:
+            logging.info("Waiting for " + str(lace) + " lace tx in \'" + self.addr + "\'...")
+            utxos = self.update_utxos()
+            for utxo in utxos:
+                tx_hash, _, tx_lace, _ = utxo
+                if tx_lace == lace:
+                    # TODO this one is important \/
+                    # mutex tx_hash check here to ensure we don't mint twice
+                    # for a single utxo/tx_hash
+                    return tx_hash
+            time.sleep(5)
 
 class CardanoComms:
     def __init__(self, network:str, new_policy:bool=False):
@@ -299,7 +322,7 @@ class CardanoComms:
         log_debug("funds    : " +str(funds))
         log_debug("change   : " + str(change))
         log_debug("diff lace: " + str(int(funds) - int(change)))
-        log_debug("diff ada : " + str( (int(funds) - int(change)) / 1000000 ))
+        log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
         # check if we have enough funding
         min_funds_required = int(min_mint_cost) + int(fee) + 10
         if funds < min_funds_required:
@@ -334,7 +357,7 @@ class CardanoComms:
         min_mint_cost = str(min_mint_cost)
         # get usable transactions
         tx_in = ""
-        for tx_id, tx_hash, contains_nft in mint_wallet.txs:
+        for tx_id, tx_hash, _, contains_nft in mint_wallet.txs:
             if contains_nft == False:
                 # replace any 
                 #tx_id = tx_id.replace(' ','')
@@ -435,22 +458,25 @@ class BlockFrostTools:
     def health_query(self):
         return self.api.health()
 
-    def sender_query(self, txhash:str):
+    def find_sender(self, txhash:str, recv_addr:str, lace):
+        lace = str(lace)
         res = self.api.transaction_utxos(hash=txhash)
-        print("inputs")
-        print(res.inputs)
-        for i in res.inputs:
-            print(i.address)
 
-        print(" . . .")
-        for i in res.outputs:
-            a = i.address
-            amount = i.amount
-            for x in amount:
-                print(a)
-                print(x)
-                print(x.quantity)
-                print(x.unit)
+        found_recv = False
+        target_addr = False
+        # TODO add check for lace?
+
+        for x in res.inputs:
+            if x.address == recv_addr:
+                found_recv = True
+        
+        # TODO what if multiple outputs i.e more than 2?
+        for x in res.outputs:
+            log_debug(x.address)
+            if x.address != recv_addr:
+                return x.address
+        time.sleep(20)
+        return False
 
         #print("outputs")
         #print(res.inputs)
@@ -467,16 +493,32 @@ class BlockFrostTools:
 
 
 if __name__ == "__main__":
-
     cmd = "cat ../files/wallet/base.addr" 
     addr = replace_b_str(cmd_out(cmd))
 
     b = BlockFrostTools(TESTNET)
     #b.addr_query(addr)
 
-    tx = "95a8b663563c111c19900da01157cc893113ad6c9e6130157c8dc0043390467d"
-    tx = "cd2e514f926671d514c427bc8a0205b0e7506b443665d0121cf919b47fd1b683"
-    b.sender_query(tx)
+    #tx = "95a8b663563c111c19900da01157cc893113ad6c9e6130157c8dc0043390467d"
+    #tx = "cd2e514f926671d514c427bc8a0205b0e7506b443665d0121cf919b47fd1b683"
+
+    # TODO start x listeners
+    nft_purchase_costs = ada_to_lace(6.9)
+    wallet = Wallet()
+    txhash = wallet.look_for_lace(nft_purchase_costs)
+    # TODO create a customer list and mutex, to ensure we don't send two nfts
+    # in the list put consumed utxos to ensure we don't use the same one twice
+
+    # TODO check for 300 or something loop until txhash is found
+    customer_addr = False
+
+    while not customer_addr:
+        customer_addr = b.find_sender(txhash=txhash, recv_addr=wallet.addr, lace=nft_purchase_costs)
+
+    log_debug("customer is " + customer_addr)
+
+    # 
+
     """
     breakpoint()
     print("Running tests")
