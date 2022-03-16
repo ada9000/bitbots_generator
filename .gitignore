@@ -6,3 +6,4 @@ output
 files
 *.raw
 *.signed
+*.env
