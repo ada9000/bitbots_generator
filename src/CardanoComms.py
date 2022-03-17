@@ -1,4 +1,5 @@
 from distutils.log import debug
+from mimetypes import init
 import os
 from re import M
 import sys
@@ -154,6 +155,7 @@ class Wallet:
         return self.txs
 
     def look_for_lace(self, lace):
+        lace = int(lace)
         while True:
             logging.info("Waiting for " + str(lace) + " lace tx in \'" + self.addr + "\'...")
             utxos = self.update_utxos()
@@ -475,7 +477,6 @@ class BlockFrostTools:
             log_debug(x.address)
             if x.address != recv_addr:
                 return x.address
-        time.sleep(20)
         return False
 
         #print("outputs")
@@ -492,50 +493,70 @@ class BlockFrostTools:
         print(address.type)  # prints 'shelley'
 
 
+class MintManager:
+    # contains a mutex of tx_ids
+    def __init__(self):
+        pass
+
+    def start_up(self):
+        # find tx_ids from file
+        pass
+    
+    def run(self):
+        # try catch that writes tx_ids to file if failure
+        # or on failure we spend all utxos into one
+        # tx in all
+        # tx out lace-fee+ all nfts
+
+        pass
+
+class MintProcess:
+    # TODO pass in reference to object of tx_ids
+    # with mutex when a process is processing a tx it adds it to list
+    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100):
+        if mint_wallet == None:
+            raise Exception('Wallet not valid')
+            #wallet = Wallet(name='', network=network)
+        
+        self.network = network
+        self.wallet = mint_wallet
+        self.bf_api = BlockFrostTools(network)
+        self.price  = ada_to_lace(nft_price_ada)
+        self.cc     = CardanoComms(network, False)
+
+    def set_tx_status(self):
+        # use mutex
+        pass
+
+    def set_nft_status(self):
+        # use mutex
+        pass
+
+    def run(self):
+        txhash = self.wallet.look_for_lace(lace=self.price)
+        customer_addr = None
+        while not customer_addr:
+            customer_addr = self.bf_api.find_sender(
+                txhash=txhash, 
+                recv_addr=self.wallet.addr, 
+                lace=self.price)
+            time.sleep(20)
+
+        idx = "0019"
+        meta_path = "../output/"+idx+".json"
+        # TODO 
+        # meta_path = get_nft_id_db()
+        res = self.cc.mint_nft(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet)
+
+
+
 if __name__ == "__main__":
-    cmd = "cat ../files/wallet/base.addr" 
-    addr = replace_b_str(cmd_out(cmd))
 
-    b = BlockFrostTools(TESTNET)
-    #b.addr_query(addr)
+    # end result should be
 
-    #tx = "95a8b663563c111c19900da01157cc893113ad6c9e6130157c8dc0043390467d"
-    #tx = "cd2e514f926671d514c427bc8a0205b0e7506b443665d0121cf919b47fd1b683"
+    # Manager(wallet, price) # uses json metadata in output to mint
+    # runs, on failure stores txs like  {tx_hases:[(tx_hash0,spent), (tx_hash1, todo), ... }... 
 
-    # TODO start x listeners
-    nft_purchase_costs = ada_to_lace(6.9)
-    wallet = Wallet()
-    txhash = wallet.look_for_lace(nft_purchase_costs)
-    # TODO create a customer list and mutex, to ensure we don't send two nfts
-    # in the list put consumed utxos to ensure we don't use the same one twice
-
-    # TODO check for 300 or something loop until txhash is found
-    customer_addr = False
-
-    while not customer_addr:
-        customer_addr = b.find_sender(txhash=txhash, recv_addr=wallet.addr, lace=nft_purchase_costs)
-
-    log_debug("customer is " + customer_addr)
-
-    # 
-
-    """
-    breakpoint()
-    print("Running tests")
-
-
-    wallet = Wallet()
-    wallet.update_utxos()
-    cc = CardanoComms(TESTNET, False)
-
-    # check the blockchain to see if nft exists if so don't mint
-    # might have to use blockfrost
-    # NOT smart blockchain or query could be off resulting in duplicates, best to do that backend here
-
-    idx = "0018"
-    meta_path = "../output/"+idx+".json"
-    res = cc.mint_nft(metadata_path=meta_path, recv_addr=wallet.addr, mint_wallet=wallet)
-    while res == False:
-        input("Bad mint try again\nPress any key...")
-        res = cc.mint_nft(metadata_path=meta_path, recv_addr=wallet.addr, mint_wallet=wallet)
-    """
+    mint_wallet = Wallet()
+    m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
+    m.run()
