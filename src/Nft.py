@@ -16,7 +16,9 @@ class Nft:
             'project':'Copyright Bitbots.art 2022',
             'traits':properties,
             'description':'nft showcasing new CIP',
-            self.new_CIP: {'mediaType':'image/svg+xml;utf8,','ref':nft_references}
+            self.new_CIP: {
+                'mediaType':'image/svg+xml;utf8,','ref':nft_references
+                }
             }
         #meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
 
