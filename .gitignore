@@ -6,8 +6,4 @@ output
 files
 *.raw
 *.signed
-<<<<<<< HEAD
 *.env
-=======
-src/.env
->>>>>>> 74afe9cc32c9c03fb073e3205a6c015e8e176503
