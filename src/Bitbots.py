@@ -33,11 +33,6 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
-# logging colours
-COLOR_RESET = '\033[0m'
-COLOR_CYAN = '\033[0;36m'
-COLOR_YELLOW = '\033[1;33m'
-COLOR_RED = '\033[1;31m'
 # Variable
 DEFAULT_WEIGHT = 1.0
 MINT_MAX = 8192
