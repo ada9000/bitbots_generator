@@ -128,11 +128,14 @@ class Bitbots:
             # remove all instaces of two or more continues whitespace, 
             # by only appending character that are not whitespace followed
             # by whitespace
-            if (i + 1) < len(data):
-                if data[i] == ' ' and data[i+1] == ' ':
-                    pass
-                else:
-                    svg_str += data[i]
+            try:
+                if (i) < len(data):
+                    if data[i] == ' ' and data[i+1] == ' ':
+                        pass
+                    else:
+                        svg_str += data[i]
+            except IndexError as e:
+                pass
         # remove the XML tag the SVG endtag and all newlines
         svg_str = svg_str.replace(XML_tag,'')
         svg_str = svg_str.replace(SVG_end,'')
@@ -245,7 +248,7 @@ class Bitbots:
             res += [i]
         return res
 
-    def find_refs_for_props(self, properties):
+    def find_refs_for_props(self, properties, nft_id):
         """ helper function to generate refs for a give set of nft properties """
         refs = []
         #self.payload_meta[trait] = used_indices
@@ -253,6 +256,27 @@ class Bitbots:
         refs += self.find_payload_refs(properties['colour'])
         refs += self.find_payload_refs('endcolour')
         refs += self.find_payload_refs('neck')
+        # add id
+        
+        # id start
+        refs += self.find_payload_refs('id_start')
+        log_debug(nft_id)
+        for i, x in enumerate(nft_id[2:]):
+        # for ids
+
+            # id transform start
+            refs += self.find_payload_refs('id_transform_start')
+            # id number ere
+            pos_ref = "id_transform_pos" + str(i)
+            refs += self.find_payload_refs(pos_ref)
+            # id transform end end
+            refs += self.find_payload_refs('id_transform_end')
+            # add number here
+            number_ref = "id_" + x.upper()
+            refs += self.find_payload_refs(number_ref)
+            # id end
+        refs += self.find_payload_refs('id_end')
+
         refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
@@ -282,10 +306,11 @@ class Bitbots:
                 while hex_hash not in used_hashes:
                     hex_hash, properties = self.gen_random_props()  
             # apply refs
-            refs = self.find_refs_for_props(properties)
+            nft_name = '0x' + hex(nft_mint_number)[2:].zfill(4)
+            ##nft_mint_number_str = str(nft_mint_number).zfill(4)
+            refs = self.find_refs_for_props(properties, nft_name)
             # save nft with padded number i.e 0001,...,1111,...,n
-            nft_mint_number_str = str(nft_mint_number).zfill(4)
-            nfts[nft_mint_number_str] = {"meta":properties, "hex":hex_hash, "refs":refs}
+            nfts[nft_name] = {"meta":properties, "hex":hex_hash, "refs":refs}
             nft_mint_number += 1
         # update set data with new nfts and save to file
         self.nft_set_data = nfts
@@ -351,8 +376,8 @@ class Bitbots:
         update the self.payload_data
         """
         # TODO remove later this just adds copy rights for initial tests
-        COPY_RIGHT = "<!-- COPYRIGHT bitbots.art pixelpool.io 2022 -->"
-        payload_str = COPY_RIGHT + payload_str
+        #COPY_RIGHT = "<!-- COPYRIGHT bitbots.art pixelpool.io 2022 -->"
+        #payload_str = COPY_RIGHT + payload_str
         # TODO deprecate above before release
 
         # convert string to array 
@@ -409,9 +434,10 @@ class Bitbots:
         # end color
         self.append_to_payload(COLOUR_STYLE_END, 'endcolour')
         # add the rest
-        order = ["neck","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+        order = ["neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
+            # Add each trait to payload, you can reference it with payload_meta
             for x in self.nft_attributes[o]:
                 # check for duplicates
                 if x in known_traits:
@@ -443,8 +469,9 @@ class Bitbots:
         n = Nft(policyid)
 
         for i in self.nft_set_data:
+            log_error(i)
             nft_name = i
-            i = int(i)
+            i = int(i, 16)
             
             payload_refs = self.nft_set_data[nft_name]["refs"]
             
