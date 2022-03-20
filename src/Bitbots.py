@@ -50,18 +50,15 @@ MAX_PAYLOAD_BYTES = 14000
 # [ ] Remove COPY_RIGHT comments
 # [ ] change input dir before realise
 
-# TODO deprecate later for testing
-INPUT_DIR = "../input-testnet" #TODO remove
-MINT_MAX = 200 # TODO remove
-
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
     def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, reset:bool=True):
         # vars
         self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
-        self.colour_lst = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff", "#ebda46", "#696969"]
-        self.ref_order = ['startcolour','colour','endcolour','neck','special','head','hats','ears','mouths','eyes']
+        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
+        self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
+        self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # parameters
         self.max_mint = max_mint
         self.max_payload_bytes = max_payload_bytes
@@ -174,7 +171,6 @@ class Bitbots:
             for trait in os.listdir(sub_dir_path):
                 filepath = sub_dir_path + '/' + trait
                 trait = trait.replace('.svg','')
-                skip_svg = False
                 # open the svg file
                 with open(filepath, 'r') as f:
                     data = f.read()
@@ -185,15 +181,16 @@ class Bitbots:
                 id_num += 1
                 # add traits for meta-meta data
                 traits.append(trait)
+                log_debug("Metadata for " + str( attribute ) + " adding \'" + trait + "\'")
             # meta meta data 
             self.nft_attributes[attribute] = traits
         # add colours to the set
         id_num = 0
-        for trait in self.colour_lst:
+        for trait in self.colours:
             self.nft_traits[trait] = self.nft_meta_inner('colour', id_num, trait)
             id_num += 1
         # add colours to the nft attributes
-        self.nft_attributes['colour'] = self.colour_lst
+        self.nft_attributes['colour'] = self.colours
         # save to file 
         write_json(NFT_TRAIT_META_FILE, self.nft_traits)
         write_json(NFT_ATTRIBUTES_META_FILE, self.nft_attributes)
@@ -256,6 +253,7 @@ class Bitbots:
         refs += self.find_payload_refs(properties['colour'])
         refs += self.find_payload_refs('endcolour')
         refs += self.find_payload_refs('neck')
+        refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
         refs += self.find_payload_refs(properties['hats'])
@@ -411,7 +409,7 @@ class Bitbots:
         # end color
         self.append_to_payload(COLOUR_STYLE_END, 'endcolour')
         # add the rest
-        order = ["neck","special","head","hats", "ears", "mouths", "eyes"]
+        order = ["neck","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
             for x in self.nft_attributes[o]:
