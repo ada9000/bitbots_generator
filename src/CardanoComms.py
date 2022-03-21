@@ -1,3 +1,4 @@
+from cmath import log
 from distutils.log import debug
 from mimetypes import init
 import os
@@ -26,6 +27,7 @@ EMPTY_BYTE_STRING = "b\'\'"
 
 # global ---------------------------------------------------------------------
 purchase_mutex = Lock()
+search_mutex = Lock()
 
 # functions ------------------------------------------------------------------
 def cmd_out(cmd):
@@ -322,7 +324,7 @@ class CardanoComms:
         metadata = read_file_return_data(metadata_path)
         nft_id, metadata = self.add_policy_id_to_meta(metadata)
         # set min mint costs and arbitrary change value
-        log_debug("nft-id: " + nft_id)
+        #log_debug("nft-id: " + nft_id)
         change = 0 # 1.5 ada
         min_mint_cost = 1500000
         # template build
@@ -347,12 +349,12 @@ class CardanoComms:
         funds = mint_wallet.lace
         # calculate change
         change = int(funds) - int(fee) - int(min_mint_cost)
-        log_debug("fee      : " +str(fee))
-        log_debug("min-mint : " + str(min_mint_cost))
-        log_debug("funds    : " +str(funds))
-        log_debug("change   : " + str(change))
-        log_debug("diff lace: " + str(int(funds) - int(change)))
-        log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
+        #log_debug("fee      : " +str(fee))
+        #log_debug("min-mint : " + str(min_mint_cost))
+        #log_debug("funds    : " +str(funds))
+        #log_debug("change   : " + str(change))
+        #log_debug("diff lace: " + str(int(funds) - int(change)))
+        #log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
         # check if we have enough funding
         min_funds_required = int(min_mint_cost) + int(fee) + 10
         if funds < min_funds_required:
@@ -408,11 +410,11 @@ class CardanoComms:
             " --out-file " + mint_wallet.tx_raw
         # remove any double whitespace
         build_raw = build_raw.replace("  "," ")
-        log_debug(build_raw)
+        #log_debug(build_raw)
         # run build tx cmd
         res = cmd_out(build_raw)
         if str(res) == EMPTY_BYTE_STRING:
-            log_info("build tx success")
+            log_info("build tx success for \'" + nft_mint_str + "\'")
         else:
             res = replace_b_str(res)
             log_error(str(res))
@@ -560,6 +562,35 @@ class MintProcess:
         # use mutex
         pass
 
+    def find_next_available(self):
+        log_debug("search mutex acquire")
+        search_mutex.acquire()
+        name = None
+        try:
+            for filename in os.listdir(OUTPUT_DIR):
+                name = filename.split('.')[0]
+                if '.status' in filename:
+                    # get json from file
+                    status_path = OUTPUT_DIR + filename
+                    f = open(status_path)
+                    data = json.load(f)
+                    f.close()
+                    if data["status"] == "available":
+                        log_debug("Nft with name \'" + name + "\' available")
+                        # change status
+                        status = {'status':'in-progress'}
+                        write_json(status_path, status)
+                        log_debug("Nft \'" + idx + "\' status set to sold")
+                        break
+                    else:
+                        name = None
+            name = None
+        finally:
+            log_debug("search mutex relase")
+            search_mutex.release()
+            return name
+
+
     def run(self):
         txhash = self.wallet.look_for_lace(lace=self.price)
         customer_addr = None
@@ -570,12 +601,32 @@ class MintProcess:
                 lace=self.price)
             time.sleep(20)
 
-        idx = "0019"
-        meta_path = "../output/"+idx+".json"
+        idx = self.find_next_available()
+
+        if idx == None:
+            log_debug("Al minted ensure app enters refund mode")
+            raise Exception("App must go into refund mode")
+
+        meta_path = OUTPUT_DIR + idx + ".json"
         # TODO 
         # meta_path = get_nft_id_db()
+        log_debug("Nft \'" + idx + "\' attempting mint to \'" + customer_addr + "\'")
         res = self.cc.mint_nft(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet)
 
+        if res != False:
+            status_path = OUTPUT_DIR + idx + ".status"
+            status = {'status':'sold'}
+            write_json(status_path, status)
+            log_debug("Nft \'" + idx + "\' status set to sold")
+            return False
+        else:
+            return True
+
+    def get_payment_addr(self):
+        return self.wallet.addr
+
+    def get_nft_price(self):
+        return self.price
 
 
 if __name__ == "__main__":
@@ -584,7 +635,11 @@ if __name__ == "__main__":
 
     # Manager(wallet, price) # uses json metadata in output to mint
     # runs, on failure stores txs like  {tx_hases:[(tx_hash0,spent), (tx_hash1, todo), ... }... 
-
+    pig = Wallet("pig")
+    """
     mint_wallet = Wallet()
-    m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
-    m.run()
+    m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=11)
+    not_done = True
+    while not_done: # TODO RUN AND BUY ALL, recover test ada from wallets
+        not_done = m.run()
+    """
