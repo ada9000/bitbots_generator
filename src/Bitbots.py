@@ -56,7 +56,7 @@ class Bitbots:
     def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, reset:bool=True):
         # vars
         self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
-        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
+        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b","#ebda46", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
         self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # parameters
