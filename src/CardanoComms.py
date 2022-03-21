@@ -86,6 +86,7 @@ class Wallet:
         sub_dir = '' 
         if name != '':
             sub_dir = name + '/'
+        self.addr = None
         self.addr_path  = WALLET_DIR + sub_dir + 'base.addr'
         self.skey       = WALLET_DIR + sub_dir + 'payment.skey'
         self.vkey       = WALLET_DIR + sub_dir + 'payment.vkey'
@@ -93,18 +94,45 @@ class Wallet:
         self.tx_raw     = WALLET_DIR + sub_dir + 'tx.raw'
         self.tx_signed  = WALLET_DIR + sub_dir + 'tx.signed'
         # check all required files exist
-        files = [self.addr_path, self.skey, self.vkey]
-        for f in files:
-            if not os.path.isfile(f):
-                raise Exception("Missing " + f)
+        self.create_wallet()
+                #raise Exception("Missing " + f)
         # set addr
-        cmd = "cat " + self.addr_path
-        self.addr = replace_b_str(cmd_out(cmd))
+        if self.addr is None:
+            cmd = "cat " + self.addr_path
+            self.addr = replace_b_str(cmd_out(cmd))
         # lace, nfts and transactions
         self.lace = 0
         self.nfts = []
         self.txs  = []
-    
+        log_debug("Wallet: " + self.name + " has addr " + self.addr)
+
+
+    def create_wallet(self):
+        # check for wallet 
+        wallet_dir = WALLET_DIR + self.name + "/"
+        if not os.path.isdir(WALLET_DIR):
+            os.mkdir(WALLET_DIR)
+        # create wallet dir 
+        if not os.path.isdir(wallet_dir):
+            os.mkdir(wallet_dir)
+        # return if ANY files are found
+        files = [self.addr_path, self.skey, self.vkey]
+        for f in files:
+            if os.path.isfile(f):
+                return
+        # create wallet keys
+        payment_keys = "cardano-cli address key-gen"+\
+            " --verification-key-file "+ self.vkey +\
+            " --signing-key-file " + self.skey
+        build_base = "cardano-cli address build"+\
+            " --payment-verification-key-file " + self.vkey +\
+            " --out-file " + self.addr_path + " " + self.network
+        res = cmd_out(payment_keys)
+        res = cmd_out(build_base)
+        log_debug("created new wallet \'" + self.name + "\'")
+        return
+
+
     def update_utxos(self):
         # query utxo
         cmd = "cardano-cli query utxo --address " + self.addr + " " + self.network
