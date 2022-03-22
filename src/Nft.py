@@ -32,7 +32,8 @@ class Nft:
                     }, 
                 self.new_CIP:{
                     self.policyid:{
-                        payload_ref:nft_payload
+                        "NOTE":"COPYRIGHT Bitbots.art 2022",
+                        str(payload_ref):nft_payload
                         }
                     }
                 }
