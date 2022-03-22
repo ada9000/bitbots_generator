@@ -195,12 +195,12 @@ class Wallet:
             logging.info("Waiting for " + str(lace) + " lace tx in \'" + self.addr + "\'...")
             utxos = self.update_utxos()
             for utxo in utxos:
-                tx_hash, _, tx_lace, _ = utxo
+                tx_hash, tx_id, tx_lace, _ = utxo
                 if tx_lace == lace:
                     # TODO this one is important \/
                     # mutex tx_hash check here to ensure we don't mint twice
                     # for a single utxo/tx_hash
-                    return tx_hash
+                    return tx_hash, tx_id
             time.sleep(5)
 
 
@@ -347,7 +347,7 @@ class CardanoComms:
         fee = cmd_out(cmd)
         fee = str(fee).replace('b\'','').replace('\\n\'','')
         # get funds
-        sender_wallet.update_utxos() # TODO what happens if it keeps updating due to incomiing payments
+        sender_wallet.update_utxos() # TODO what happens if it keeps updating due to incoming payments
         funds = sender_wallet.lace
         # calculate change
 
@@ -426,6 +426,72 @@ class CardanoComms:
         return
 
 
+    def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, tx_hash, tx_id, price):
+        # read meta and 'fix' (insert policy id into it)
+        metadata = read_file_return_data(metadata_path)
+        nft_id, metadata = self.add_policy_id_to_meta(metadata)
+        # set min mint costs and arbitrary change value
+        #log_debug("nft-id: " + nft_id)
+        change = 0 # 1.5 ada
+        min_mint_cost = 1500000
+        # template build TODO note this doesn't return anything as it saves it in
+        #                TODO   tx raw which is not so good as needs a mutex at the least and a diff name or unique name for tx
+        self.build_mint_tx(fee="0", change=change,
+            recv_addr=recv_addr,
+            mint_wallet=mint_wallet,
+            nft_id=nft_id,
+            min_mint_cost=min_mint_cost,
+            metadata_path=metadata_path,
+            txhash=tx_hash,
+            txid=tx_id)
+        witness = "1"
+        cmd = "cardano-cli transaction calculate-min-fee"+\
+            " --tx-body-file " + mint_wallet.tx_raw+\
+            " --tx-in-count 1 --tx-out-count 1"+\
+            " --witness-count " + witness +\
+            " " + self.network +\
+            " --protocol-params-file " + self.protocol_path+\
+            " | cut -d \" \" -f1"
+        fee = cmd_out(cmd)
+        fee = str(fee).replace('b\'','').replace('\\n\'','')
+        # get funds
+        mint_wallet.update_utxos() # TODO what happens if it keeps updating due to incomiing payments
+        #funds = mint_wallet.lace
+        funds = price # TODO funds are the price of tx
+        # calculate change
+        change = int(funds) - int(fee) - int(min_mint_cost)
+        if change < 1:
+            log_error("Invalid change \'" + str(lace_to_ada(change)) + "\' ada")
+        #log_debug("fee      : " +str(fee))
+        #log_debug("min-mint : " + str(min_mint_cost))
+        #log_debug("funds    : " +str(funds))
+        #log_debug("change   : " + str(change))
+        #log_debug("diff lace: " + str(int(funds) - int(change)))
+        #log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
+        # check if we have enough funding
+        min_funds_required = int(min_mint_cost) + int(fee) + 10
+        if funds < min_funds_required:
+            log_error("Aborting mint."+\
+                " Low funds " + str(funds)+\
+                " expected " + str(min_funds_required))
+            return False
+        #build
+        self.build_mint_tx(fee=fee,
+            change=change,
+            recv_addr=recv_addr,
+            mint_wallet=mint_wallet,
+            nft_id=nft_id,
+            min_mint_cost=min_mint_cost,
+            metadata_path=metadata_path,
+            txhash=tx_hash,
+            txid=tx_id)
+        #sign
+        if self.sign_mint_tx(wallet=mint_wallet) is False:
+            return False
+        # send
+        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
+
+
     # nft mint ---------------------------------------------------------------
     def mint_nft(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet):
         # read meta and 'fix' (insert policy id into it)
@@ -486,7 +552,7 @@ class CardanoComms:
         return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
 
 
-    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path):
+    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path, txhash=None, txid=None):
         """ builds a nft transaction """
         # build nft mint str (assume amount to be 1)
         nft_mint_str = "\""
@@ -505,6 +571,12 @@ class CardanoComms:
                 #tx_hash = tx_hash.replace(' ','')
                 tx_in += " --tx-in " + tx_id + "#" + tx_hash
                 # TODO DO NOT USE ALL TXS, ONLY CONSUME SENDERS TX
+        log_error(tx_in)
+        if tx_hash != None:
+            log_debug("spending tx from sender")
+            tx_in = " --tx-in " + str(txhash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
+            log_error(tx_in)
+
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + change
         # template transaction for cmd string
@@ -610,16 +682,18 @@ class BlockFrostTools:
         target_addr = False
         # TODO add check for lace?
 
+        # TODO deprecate this logic
         for x in res.inputs:
             if x.address == recv_addr:
                 found_recv = True
+        #END TODO ------
         
         # TODO what if multiple outputs i.e more than 2?
         for x in res.outputs:
             log_debug(x.address)
             if x.address != recv_addr:
                 return x.address
-        return False
+        return None
 
         #print("outputs")
         #print(res.inputs)
@@ -633,6 +707,41 @@ class BlockFrostTools:
         address = self.api.address(address=addr)
         print(address)
         print(address.type)  # prints 'shelley'
+
+    def return_all_meta(self, policy:str):
+        assets = []
+        txs = []
+        meta721 = {}
+        meta722 = {}
+
+        # get asset from policy
+        res = self.api.assets_policy(policy)
+        for x in res:
+            assets.append(x.asset)
+
+        # get txs from asset
+        for x in assets:
+            tx = self.api.asset_transactions(x)
+            txs.append(tx.tx_hash)
+
+        # TODO fin this 
+        # meta[1].json_metadata.TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc['38']
+        # vars(x[0].json_metadata.TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc)['0026']
+        for x in txs:
+            meta = self.api.transaction_metadata(x)
+            for i in range(len(meta)):
+                if meta[i].label == "721":
+                    x
+                    pass
+                elif meta[i].label == "722":
+                    pass
+
+        #res = self.api.assets_policy("dbe0289a2bb4de7514f36e5345414cef7fa2f748eede79630d3f737f")
+        #res = self.t
+        # get meta from txs
+        breakpoint()
+        res = self.api.transaction_metadata("tx")
+        pass
 
 #-----------------------------------------------------------------------------
 #TODO refund Process
@@ -690,14 +799,19 @@ class MintProcess:
 
 
     def run(self):
-        txhash = self.wallet.look_for_lace(lace=self.price)
+        txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
+        print("hash")
+        log_error(txhash)
+        print("id")
+        log_error(tx_id)
         customer_addr = None
         while not customer_addr:
             customer_addr = self.bf_api.find_sender(
                 txhash=txhash, 
                 recv_addr=self.wallet.addr, 
                 lace=self.price)
-            time.sleep(20)
+            if customer_addr is None:
+                time.sleep(20)
 
         idx = self.find_next_available()
 
@@ -709,7 +823,7 @@ class MintProcess:
         # TODO 
         # meta_path = get_nft_id_db()
         log_debug("Nft \'" + idx + "\' attempting mint to \'" + customer_addr + "\'")
-        res = self.cc.mint_nft(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet)
+        res = self.cc.mint_nft_using_txhash(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet, tx_hash=txhash, tx_id=tx_id, price=self.price)
 
         if res != False:
             status_path = OUTPUT_DIR + idx + ".status"
