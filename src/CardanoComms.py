@@ -318,6 +318,109 @@ class CardanoComms:
         return nft_id, metadata
     
     
+    # simple tx --------------------------------------------------------------
+    def simple_tx(self, lace, recv_addr:str, sender_wallet:Wallet):
+        sender_wallet.update_utxos()
+        fee = "0"
+        change = "0"
+        lace = str(lace)
+        # build 1 
+        self.build_tx(fee=fee, change=change,
+            lace=lace,
+            recv_addr=recv_addr,
+            mint_wallet=sender_wallet,)
+        # calc fee
+        witness = "1"
+        cmd = "cardano-cli transaction calculate-min-fee"+\
+            " --tx-body-file " + sender_wallet.tx_raw+\
+            " --tx-in-count 1 --tx-out-count 1"+\
+            " --witness-count " + witness +\
+            " " + self.network +\
+            " --protocol-params-file " + self.protocol_path+\
+            " | cut -d \" \" -f1"
+        fee = cmd_out(cmd)
+        fee = str(fee).replace('b\'','').replace('\\n\'','')
+        # get funds
+        sender_wallet.update_utxos() # TODO what happens if it keeps updating due to incomiing payments
+        funds = sender_wallet.lace
+        # calculate change
+
+
+        change = int(funds) - int(fee) - int(lace)
+        log_error("funds = " + str(funds))
+        log_error("fee = " + str(fee))
+        log_error("lace = " + str(lace))
+        log_error("change = " + str(change))
+
+        
+        # build 2
+        self.build_tx(fee=fee, change=change,
+            lace=lace,
+            recv_addr=recv_addr,
+            mint_wallet=sender_wallet,)
+
+        # sign
+        sign_tx = "cardano-cli transaction sign" + \
+            " --signing-key-file " + sender_wallet.skey + \
+            " "+ self.network +\
+            " --tx-body-file " + sender_wallet.tx_raw+\
+            " --out-file " + sender_wallet.tx_signed
+        
+        res = cmd_out(sign_tx)
+        if str(res) != EMPTY_BYTE_STRING:
+            log_error("signing failed! " + str(res))
+            return False
+        log_info("signing success")
+
+        cmd = "cardano-cli transaction submit"+\
+            " --tx-file " + sender_wallet.tx_signed + " " + self.network
+        res = cmd_out(cmd)
+        res = replace_b_str(res)
+        res = res.replace('\n','')
+        log_info(res)
+        if 'BadImputsUTxO' in res:
+            log_error("BadImputsUTxO")
+            return False
+        if 'ValueNotConservedUTxO' in res:
+            log_error("ValueNotConservedUTxO")
+            log_error("Maybe try funding " + sender_wallet.addr + " it contains " + str(lace_to_ada(sender_wallet.lace)))
+            return False
+
+        # TODO check if payment was sent?
+        return True
+
+
+        
+    def build_tx(self, fee, lace, change, recv_addr:str, mint_wallet:Wallet):
+        # get usable transactions
+        tx_in = ""
+        for tx_id, tx_hash, _, contains_nft in mint_wallet.txs:
+            if contains_nft == False:
+                tx_in += " --tx-in " + tx_id + "#" + tx_hash
+        # set the mint wallet as our change address
+        tx_out = " --tx-out " + mint_wallet.addr + "+" + str(change)
+        # template transaction for cmd string # TODO self target slot in build_raw should be altered
+        build_raw = "cardano-cli transaction build-raw "+\
+            " --fee "+ fee +\
+            " --tx-out " + recv_addr + "+" + lace+\
+            tx_out +\
+            tx_in +\
+            " --invalid-hereafter " + str(self.target_slot)+\
+            " --out-file " + mint_wallet.tx_raw
+        # remove any double whitespace
+        build_raw = build_raw.replace("  "," ")
+        print(build_raw)
+        #log_debug(build_raw)
+        # run build tx cmd
+        res = cmd_out(build_raw)
+        if str(res) == EMPTY_BYTE_STRING:
+            log_info("build tx success")
+        else:
+            res = replace_b_str(res)
+            log_error(str(res))
+        return
+
+
     # nft mint ---------------------------------------------------------------
     def mint_nft(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet):
         # read meta and 'fix' (insert policy id into it)
@@ -327,7 +430,8 @@ class CardanoComms:
         #log_debug("nft-id: " + nft_id)
         change = 0 # 1.5 ada
         min_mint_cost = 1500000
-        # template build
+        # template build TODO note this doesn't return anything as it saves it in
+        #                TODO   tx raw which is not so good as needs a mutex at the least and a diff name or unique name for tx
         self.build_mint_tx(fee="0", change=change,
             recv_addr=recv_addr,
             mint_wallet=mint_wallet,
@@ -374,7 +478,7 @@ class CardanoComms:
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
         # send
-        return self.submit_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
+        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
 
 
     def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path):
@@ -437,7 +541,7 @@ class CardanoComms:
         return True
 
 
-    def submit_tx(self, recv_addr:str, wallet:Wallet, nft_id:str):
+    def submit_mint_tx(self, recv_addr:str, wallet:Wallet, nft_id:str):
         cmd = "cardano-cli transaction submit"+\
             " --tx-file " + wallet.tx_signed + " " + self.network
         res = cmd_out(cmd)
@@ -618,28 +722,12 @@ class MintProcess:
             status = {'status':'sold'}
             write_json(status_path, status)
             log_debug("Nft \'" + idx + "\' status set to sold")
-            return False
-        else:
             return True
+        else:
+            return False
 
     def get_payment_addr(self):
         return self.wallet.addr
 
     def get_nft_price(self):
         return self.price
-
-
-if __name__ == "__main__":
-
-    # end result should be
-
-    # Manager(wallet, price) # uses json metadata in output to mint
-    # runs, on failure stores txs like  {tx_hases:[(tx_hash0,spent), (tx_hash1, todo), ... }... 
-    pig = Wallet("pig")
-    """
-    mint_wallet = Wallet()
-    m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=11)
-    not_done = True
-    while not_done: # TODO RUN AND BUY ALL, recover test ada from wallets
-        not_done = m.run()
-    """
