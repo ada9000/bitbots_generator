@@ -627,23 +627,6 @@ class BlockFrostTools:
         print(address.type)  # prints 'shelley'
 
 
-class MintManager:
-    # contains a mutex of tx_ids
-    def __init__(self):
-        pass
-
-    def start_up(self):
-        # find tx_ids from file
-        pass
-    
-    def run(self):
-        # try catch that writes tx_ids to file if failure
-        # or on failure we spend all utxos into one
-        # tx in all
-        # tx out lace-fee+ all nfts
-
-        pass
-
 class MintProcess:
     # TODO pass in reference to object of tx_ids
     # with mutex when a process is processing a tx it adds it to list
