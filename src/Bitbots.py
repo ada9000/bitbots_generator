@@ -37,6 +37,9 @@ COLOUR_STYLE_END = '} </style>'
 DEFAULT_WEIGHT = 1.0
 MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
+# TODO remove
+INPUT_DIR = "../input-testnet/"
+MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
 # [ ] implent id special tag
@@ -49,7 +52,6 @@ MAX_PAYLOAD_BYTES = 14000
 # [ ] Add secretes into svg?
 # [ ] Remove COPY_RIGHT comments
 # [ ] change input dir before realise
-
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
@@ -76,6 +78,16 @@ class Bitbots:
 
         # generate nft
         self.generate(reset)
+
+
+    def get_existing_set(self): # TODO is this going to be deprecated
+        nft_meta = []
+        for filename in os.listdir(OUTPUT_DIR):
+            name = filename.split('.')[0]
+            if '.json' in filename:
+                nft_meta.appned(name)
+        return nft_meta
+
 
     def generate(self, reset:bool=True):
         if not reset:
@@ -260,7 +272,6 @@ class Bitbots:
         
         # id start
         refs += self.find_payload_refs('id_start')
-        log_debug(nft_id)
         for i, x in enumerate(nft_id[2:]):
         # for ids
 
@@ -306,7 +317,8 @@ class Bitbots:
                 while hex_hash not in used_hashes:
                     hex_hash, properties = self.gen_random_props()  
             # apply refs
-            nft_name = '0x' + hex(nft_mint_number)[2:].zfill(4)
+            #nft_name = '0x' + hex(nft_mint_number)[2:].zfill(4) # TODO
+            nft_name = str(nft_mint_number).zfill(4) # TODO had to use interger here for minting
             ##nft_mint_number_str = str(nft_mint_number).zfill(4)
             refs = self.find_refs_for_props(properties, nft_name)
             # save nft with padded number i.e 0001,...,1111,...,n
@@ -469,7 +481,7 @@ class Bitbots:
         n = Nft(policyid)
 
         for i in self.nft_set_data:
-            log_error(i)
+            log_debug("create nft: " + i)
             nft_name = i
             i = int(i, 16)
             
@@ -482,9 +494,15 @@ class Bitbots:
             props = self.nft_set_data[nft_name]["meta"]
             cardano_meta = n.generate_nft(nft_name=nft_name, payload_ref=i, nft_payload=nft_payload, nft_references=payload_refs, properties=props)
             self.cardano_nft_meta[nft_name] = cardano_meta
-            #
+            # write json files
             f = OUTPUT_DIR + nft_name + ".json"
             write_json(f, cardano_meta)
+            # write status file
+            f = OUTPUT_DIR + nft_name + ".status"
+            status = {'status':'available'}
+            #if not os.path.exists(f): #TODO ensure nfts are preseved later on
+            write_json(f, status)
+
             # check file size
             s = os.path.getsize(f)
             if s > MAX_PAYLOAD_BYTES:
