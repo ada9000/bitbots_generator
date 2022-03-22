@@ -169,14 +169,19 @@ class Wallet:
                         nfts.append( (utxo[i+1], utxo[i+2]) )
             # ignore transactions with nfts in available lace
             if utxo_has_nft == False:
-                lace_available += int(utxo[2])
+                try:
+                    lace_available += int(utxo[2])
+                except ValueError:
+                    log_debug("ValueError likely a socket issue")
+                    time.sleep(5)
+                    self.update_utxos()
             tx_lace = int(utxo[2])
             # calc total lace by adding lace attached to each uxto
             lace_total += int(utxo[2])
             # append all transactions with a boolean to announce nft present
             txs.append( (utxo[0], utxo[1], tx_lace, utxo_has_nft) )
         # log and assign
-        log_debug("addr  : " + self.addr)
+        log_debug("addr  : " + COLOR_CYAN +self.addr)
         log_debug("lace  : " + str(lace_available))
         log_debug("total : " + str(lace_total))
         self.lace   = lace_available
@@ -198,8 +203,10 @@ class Wallet:
                     return tx_hash
             time.sleep(5)
 
+
+# ----------------------------------------------------------------------------
 class CardanoComms:
-    def __init__(self, network:str, new_policy:bool=False):
+    def __init__(self, network:str=TESTNET, new_policy:bool=False):
         # check valid network
         if network not in NETWORKS:
             raise Exception("Invalid network please use one of the following \'" + str(NETWORKS) + "\'")
@@ -207,7 +214,7 @@ class CardanoComms:
         self.policy_script  = POLICY_DIR + "policy.script"
         self.policy_vkey    = POLICY_DIR + "policy.vkey"
         self.policy_skey    = POLICY_DIR + "policy.skey"
-        self.policy_slot    = POLICY_DIR + "slot.json"
+        self.slot_path      = POLICY_DIR + "slot.json"
         self.policy_id_path = POLICY_DIR + "policy_id.json"
         self.protocol_path  = POLICY_DIR + "protocol.json"
         self.target_slot    = None
@@ -224,7 +231,7 @@ class CardanoComms:
         if not os.path.isfile(self.policy_id_path):
             raise Exception("Not policy-id json at " + str(self.policy_id_path))
         self.policy_id = read_file_return_data(self.policy_id_path)["id"]
-        self.target_slot = read_file_return_data(self.policy_slot)["slot"] 
+        self.target_slot = read_file_return_data(self.slot_path)["slot"] 
 
     def clean(self):
         # first backup
@@ -259,8 +266,7 @@ class CardanoComms:
         res = cmd_out(cmd)
         # stip unwanted chars from key_hash   
         self.key_hash = replace_b_str(res)#str(res).replace('b\'','').replace('\\n\'','')
-        print(self.key_hash)
-        breakpoint()
+        self.key_hash = self.key_hash.replace('\\n','')
         # check key hash is correct
         if len(self.key_hash) != 56:
             raise Exception("Generate Key Hash Error", self.keyhash)
@@ -270,7 +276,7 @@ class CardanoComms:
         current_slot = int(cmd_out(cmd))
         # multiple expire time by 3600 seconds and add to amend inputed hours to the target slot
         self.target_slot = current_slot + 8760 * 3600
-        self.write_json(self.slot_path, {"slot":self.target_slot})
+        write_json(self.slot_path, {"slot":self.target_slot})
         log_debug("slot current : " + str(current_slot))
         log_debug("slot target  : " + str(self.target_slot))
         log_debug("slot diff    : " + str((self.target_slot - current_slot)))
@@ -280,7 +286,7 @@ class CardanoComms:
             "scripts": [
                 {
                     "type": "before",
-                    "slot": self.policy_slot
+                    "slot": self.target_slot
                 }, {
                     "type": "sig",
                     "keyHash": self.key_hash
@@ -388,7 +394,6 @@ class CardanoComms:
 
         # TODO check if payment was sent?
         return True
-
 
         
     def build_tx(self, fee, lace, change, recv_addr:str, mint_wallet:Wallet):
@@ -499,6 +504,7 @@ class CardanoComms:
                 #tx_id = tx_id.replace(' ','')
                 #tx_hash = tx_hash.replace(' ','')
                 tx_in += " --tx-in " + tx_id + "#" + tx_hash
+                # TODO DO NOT USE ALL TXS, ONLY CONSUME SENDERS TX
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + change
         # template transaction for cmd string
@@ -554,6 +560,9 @@ class CardanoComms:
         if 'ValueNotConservedUTxO' in res:
             log_error("ValueNotConservedUTxO")
             return False
+        if 'Error' in res:
+            log_error("something went wrong")
+            return False
         transaction_sent = False
         idx = 0
         while not transaction_sent:
@@ -571,8 +580,7 @@ class CardanoComms:
                 idx += 1
         return True
 
-# Refund manger class
-# Mint manger class
+#-----------------------------------------------------------------------------
 class BlockFrostTools:
     def __init__(self, network:str=TESTNET):
         # set network url
@@ -626,7 +634,10 @@ class BlockFrostTools:
         print(address)
         print(address.type)  # prints 'shelley'
 
+#-----------------------------------------------------------------------------
+#TODO refund Process
 
+#-----------------------------------------------------------------------------
 class MintProcess:
     # TODO pass in reference to object of tx_ids
     # with mutex when a process is processing a tx it adds it to list
