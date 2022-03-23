@@ -23,6 +23,11 @@ class Nft:
         #meta[self.nft_CIP] = {self.policyid:{nft_name:nft_details}}
 
         if nft_payload != None:
+            # TODO add multiple payloads i.e
+            # '1':data,
+            # '2':data,
+            # 'n':data
+
             # include new CIP payload
             meta = {
                 self.nft_CIP:{
