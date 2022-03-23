@@ -736,18 +736,21 @@ class BlockFrostTools:
                 json_tag = 'json_metadata'
                 label = meta[i]['label']
                 policy_id =  list(meta[i][json_tag])[0]
-                ref_number =  list(meta[i][json_tag][policy_id])[0]
-                metadata = meta[i][json_tag][policy_id][ref_number]
+                mint_id =  list(meta[i][json_tag][policy_id])[0]
                 # each metadata type to it's own dict (optionally we could put it all in one json) 
                 if label == "721":
                     log_debug("721")
-                    meta721[ref_number] = metadata
+                    # get the metadata using the 721 standard
+                    meta721[mint_id] = meta[i][json_tag][policy_id][mint_id]
                 elif label == "722":
                     log_debug("722")
-                    meta722[ref_number] = metadata
+                    # for each datapackage in new CIP
+                    for ref in list(meta[i][json_tag][policy_id]):
+                        # add the payload to our json, store using the payload reference
+                        # as key to the contained payload data
+                        meta722[ref] = meta[i][json_tag][policy_id][ref]
                 else:
                     log_error("Unknown label")
-                log_info(str(metadata))
         # return dict of 721 and 722
         return meta721, meta722
 
