@@ -722,26 +722,34 @@ class BlockFrostTools:
         # get txs from asset
         for x in assets:
             tx = self.api.asset_transactions(x)
-            txs.append(tx.tx_hash)
+            for y in tx:
+                txs.append(y.tx_hash)
 
-        # TODO fin this 
-        # meta[1].json_metadata.TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc['38']
-        # vars(x[0].json_metadata.TEST5ba13e49e3877ef371be591eb1482bd8261d66a4c489a9b522bc)['0026']
+        # for each transaction related to an asset
         for x in txs:
-            meta = self.api.transaction_metadata(x)
+            # obtain meta as json
+            meta = self.api.transaction_metadata(x, return_type='json')
+            log_debug("meta payload/s \'" + str(len(meta)) + " \'")
+            # for each CIP 
             for i in range(len(meta)):
-                if meta[i].label == "721":
-                    x
-                    pass
-                elif meta[i].label == "722":
-                    pass
-
-        #res = self.api.assets_policy("dbe0289a2bb4de7514f36e5345414cef7fa2f748eede79630d3f737f")
-        #res = self.t
-        # get meta from txs
-        breakpoint()
-        res = self.api.transaction_metadata("tx")
-        pass
+                # get json specific json/dict keys
+                json_tag = 'json_metadata'
+                label = meta[i]['label']
+                policy_id =  list(meta[i][json_tag])[0]
+                ref_number =  list(meta[i][json_tag][policy_id])[0]
+                metadata = meta[i][json_tag][policy_id][ref_number]
+                # each metadata type to it's own dict (optionally we could put it all in one json) 
+                if label == "721":
+                    log_debug("721")
+                    meta721[ref_number] = metadata
+                elif label == "722":
+                    log_debug("722")
+                    meta722[ref_number] = metadata
+                else:
+                    log_error("Unknown label")
+                log_info(str(metadata))
+        # return dict of 721 and 722
+        return meta721, meta722
 
 #-----------------------------------------------------------------------------
 #TODO refund Process
