@@ -671,6 +671,8 @@ class BlockFrostTools:
         )
         self.health = self.health_query()
 
+        self.policy_meta = {}
+
     def health_query(self):
         return self.api.health()
 
@@ -708,7 +710,7 @@ class BlockFrostTools:
         print(address)
         print(address.type)  # prints 'shelley'
 
-    def return_all_meta(self, policy:str):
+    def policy_to_json(self, policy:str):
         assets = []
         txs = []
         meta721 = {}
@@ -752,7 +754,34 @@ class BlockFrostTools:
                 else:
                     log_error("Unknown label")
         # return dict of 721 and 722
+        self.policy_meta[policy] = {'721':meta721, '722':meta722}
         return meta721, meta722
+
+    def onchain_nft_to_svg(self, policy:str, nft_id:str, force_update:bool=False):
+        
+        # if this is the first run convert policy to json
+        if policy in self.policy_meta.keys() and force_update:
+            self.policy_to_json(policy)
+        elif policy not in self.policy_meta.keys():
+            self.policy_to_json(policy)
+
+        # get the refs for the current nft_id
+        svg_str = ""
+        refs = self.policy_meta[policy]['721'][nft_id]['722']['ref']
+
+        # combine all payload strings into one svg string
+        for i in refs:
+            for data in self.policy_meta[policy]['722'][str(i)]:
+                svg_str += data
+        svg_str = svg_str.strip()
+
+        # TODO if write is needed
+        if False:
+            f = open("test.svg", "w")
+            f.write(svg_str)
+            f.close()
+        # return the svg string
+        return svg_str
 
 #-----------------------------------------------------------------------------
 #TODO refund Process
