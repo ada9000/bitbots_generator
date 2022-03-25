@@ -4,6 +4,7 @@ import random
 
 from flask import Flask, jsonify, request
 from Bitbots import Bitbots
+from CardanoComms import *
 
 from flask_cors import CORS
 
@@ -15,16 +16,39 @@ app = Flask(__name__)
 CORS(app)
 app.config["SERVER_NAME"] = "127.0.0.1:5000"
 
+mint_wallet = Wallet()
+m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
+t = BlockFrostTools()
+#m.run()
 
 # load json
 
-# test mint
 
 
 # get all?
 @app.route("/")
 def home():
     return "Home"
+
+@app.route("/policy", methods=['GET','POST'])
+def policy():
+
+    return t.return_all_meta()
+
+@app.route("/addr")
+def addr():
+    return m.get_payment_addr()
+
+@app.route("/price")
+def price():
+    return m.get_nft_price()
+
+
+#@app.route("/svg")
+#def svg():
+#    with open(filename_svg, 'r') as f:
+#        data = f.read()
+
 
 
 @app.route("/generate")
