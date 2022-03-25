@@ -1,4 +1,5 @@
 from cmath import log
+from distutils.file_util import write_file
 from distutils.log import debug
 from mimetypes import init
 import os
@@ -27,7 +28,6 @@ EMPTY_BYTE_STRING = "b\'\'"
 
 # global ---------------------------------------------------------------------
 purchase_mutex = Lock()
-search_mutex = Lock()
 
 # functions ------------------------------------------------------------------
 def cmd_out(cmd):
@@ -391,6 +391,10 @@ class CardanoComms:
             log_error("ValueNotConservedUTxO")
             log_error("Maybe try funding " + sender_wallet.addr + " it contains " + str(lace_to_ada(sender_wallet.lace)))
             return False
+        if 'Error' in res:
+            log_error("Error" + res)
+            return False
+
 
         # TODO check if payment was sent?
         return True
@@ -571,7 +575,6 @@ class CardanoComms:
                 #tx_hash = tx_hash.replace(' ','')
                 tx_in += " --tx-in " + tx_id + "#" + tx_hash
                 # TODO DO NOT USE ALL TXS, ONLY CONSUME SENDERS TX
-        log_error(tx_in)
         if tx_hash != None:
             log_debug("spending tx from sender")
             tx_in = " --tx-in " + str(txhash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
@@ -633,7 +636,7 @@ class CardanoComms:
             log_error("ValueNotConservedUTxO")
             return False
         if 'Error' in res:
-            log_error("something went wrong")
+            log_error("something went wrong (socket?)")
             return False
         transaction_sent = False
         idx = 0
@@ -790,7 +793,7 @@ class BlockFrostTools:
 class MintProcess:
     # TODO pass in reference to object of tx_ids
     # with mutex when a process is processing a tx it adds it to list
-    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100):
+    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100, new_policy:bool=False):
         if mint_wallet == None:
             raise Exception('Wallet not valid')
             #wallet = Wallet(name='', network=network)
@@ -799,7 +802,8 @@ class MintProcess:
         self.wallet = mint_wallet
         self.bf_api = BlockFrostTools(network)
         self.price  = ada_to_lace(nft_price_ada)
-        self.cc     = CardanoComms(network, False)
+        self.cc     = CardanoComms(network, new_policy)
+        self.search_mutex = Lock()
 
     def set_tx_status(self):
         # use mutex
@@ -811,7 +815,7 @@ class MintProcess:
 
     def find_next_available(self):
         log_debug("search mutex acquire")
-        search_mutex.acquire()
+        self.search_mutex.acquire()
         name = None
         try:
             for filename in os.listdir(OUTPUT_DIR):
@@ -834,11 +838,19 @@ class MintProcess:
             name = None
         finally:
             log_debug("search mutex relase")
-            search_mutex.release()
+            self.search_mutex.release()
             return name
 
 
     def run(self):
+        idx = self.find_next_available()
+
+        if idx == None:
+            log_debug("All minted ensure app enters refund mode")
+            return True
+            #raise Exception("App must go into refund mode")
+
+
         txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
         print("hash")
         log_error(txhash)
@@ -853,26 +865,24 @@ class MintProcess:
             if customer_addr is None:
                 time.sleep(20)
 
-        idx = self.find_next_available()
-
-        if idx == None:
-            log_debug("Al minted ensure app enters refund mode")
-            raise Exception("App must go into refund mode")
-
+        
         meta_path = OUTPUT_DIR + idx + ".json"
         # TODO 
         # meta_path = get_nft_id_db()
         log_debug("Nft \'" + idx + "\' attempting mint to \'" + customer_addr + "\'")
-        res = self.cc.mint_nft_using_txhash(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet, tx_hash=txhash, tx_id=tx_id, price=self.price)
-
+        res = False
+        # loop here
+        while not res:
+            log_error("attempting mint for " + customer_addr)
+            res = self.cc.mint_nft_using_txhash(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet, tx_hash=txhash, tx_id=tx_id, price=self.price)
+        log_error("TX success")
         if res != False:
             status_path = OUTPUT_DIR + idx + ".status"
             status = {'status':'sold'}
             write_json(status_path, status)
             log_debug("Nft \'" + idx + "\' status set to sold")
-            return True
-        else:
-            return False
+        
+        return False
 
     def get_payment_addr(self):
         return self.wallet.addr
