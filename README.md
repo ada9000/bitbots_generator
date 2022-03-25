@@ -13,3 +13,7 @@
 
 ## Minting
 - Todo
+
+
+## Issues and notes
+- Notice a txoutput to small when using 3 ada? for hash 89a4466c5a6aca862e33daf6fe13705aa01c01af18ecb091f659880a1978b24e
