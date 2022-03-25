@@ -73,6 +73,7 @@ class Bitbots:
         self.payload_meta = {} # about payload indices
         self.payload_data = {} # payload data
         self.payload_index = 0
+        self.last_payload_size = 0
         # Cardano nft meta
         self.cardano_nft_meta = {}
 
@@ -401,6 +402,8 @@ class Bitbots:
         RESET_VALUE = 128# 128 rows
         line_count = 0
         # for each row of 64 in the payload array TODO fix
+        log_debug("Payload index" + str(self.payload_index))
+
         for row in payload_arr:
             if line_count >= RESET_VALUE:
                 log_debug("Payload for \'" + trait +"\' stored in idx " + str(self.payload_index))
@@ -432,6 +435,8 @@ class Bitbots:
         """
         payload_str = ""
         self.payload_data = {}
+        self.payload_index = 0
+        self.last_payload_size = 0
         
         # SVG start until color
         payload_str = ""
@@ -483,7 +488,7 @@ class Bitbots:
         for i in self.nft_set_data:
             log_debug("create nft: " + i)
             nft_name = i
-            i = int(i, 16)
+            i = int(i)
             
             payload_refs = self.nft_set_data[nft_name]["refs"]
             
