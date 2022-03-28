@@ -10,19 +10,14 @@ from flask_cors import CORS
 
 import urllib.parse
 
-b = Bitbots()
-nfts = b.shuffle()
 app = Flask(__name__)
 CORS(app)
-app.config["SERVER_NAME"] = "127.0.0.1:5000"
+app.config["SERVER_NAME"] = "127.0.0.1:5225"
 
 mint_wallet = Wallet()
-m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
+#m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
 t = BlockFrostTools()
 #m.run()
-
-# load json
-
 
 
 # get all?
@@ -34,6 +29,14 @@ def home():
 def policy():
 
     return t.return_all_meta()
+
+# you can now type nft/0001 to and the image will be returned
+# svg data is sourced from the Cardano blockchain!
+@app.route("/nft/<id>")
+def get_nft(id):
+    policy = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
+    svg = t.onchain_nft_to_svg(policy, id)
+    return svg
 
 @app.route("/addr")
 def addr():
@@ -77,12 +80,6 @@ def showme():
     n = random.randint(0, 8192)
     test = nfts[str(n)]
     return test
-
-# get specific
-@app.route("/nfts")
-def nft():
-    # warning can be a 300 mb call
-    return jsonify(nfts)
 
 # TODO show svg image of nft
 # TODO request purchase
