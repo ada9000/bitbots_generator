@@ -19,6 +19,7 @@ mint_wallet = Wallet()
 t = BlockFrostTools()
 #m.run()
 
+POLICY = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
 
 # get all?
 @app.route("/")
@@ -27,15 +28,17 @@ def home():
 
 @app.route("/policy", methods=['GET','POST'])
 def policy():
-
     return t.return_all_meta()
+
+@app.route("/nft_count")
+def get_count():
+    return jsonify({"count":t.policy_nft_count(POLICY)})
 
 # you can now type nft/0001 to and the image will be returned
 # svg data is sourced from the Cardano blockchain!
 @app.route("/nft/<id>")
 def get_nft(id):
-    policy = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
-    svg = t.onchain_nft_to_svg(policy, id)
+    svg = t.onchain_nft_to_svg(POLICY, id)
     return svg
 
 @app.route("/addr")

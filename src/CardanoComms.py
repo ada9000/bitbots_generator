@@ -760,6 +760,15 @@ class BlockFrostTools:
         self.policy_meta[policy] = {'721':meta721, '722':meta722}
         return meta721, meta722
 
+
+    def policy_nft_count(self, policy:str):
+        # if this is the first run convert policy to json
+        if policy not in self.policy_meta.keys():
+            self.policy_to_json(policy)
+
+        return len(self.policy_meta[policy]['721'])
+
+
     def onchain_nft_to_svg(self, policy:str, nft_id:str, force_update:bool=False):
         
         # if this is the first run convert policy to json
