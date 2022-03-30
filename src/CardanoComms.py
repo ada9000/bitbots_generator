@@ -786,7 +786,7 @@ class BlockFrostTools:
             meta722 =  self.policy_meta[policy]['722']       
             self.policy_meta[policy] = {'721':meta721, '722':meta722, 'nfts':svgs}
 
-        return self.policy_meta[policy]['nfts']
+        return self.policy_meta[policy]
 
     def onchain_nft_to_svg(self, policy:str, nft_id:str, force_update:bool=False):
         
