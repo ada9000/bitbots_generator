@@ -765,9 +765,28 @@ class BlockFrostTools:
         # if this is the first run convert policy to json
         if policy not in self.policy_meta.keys():
             self.policy_to_json(policy)
-
         return len(self.policy_meta[policy]['721'])
 
+
+    # populate and return nft data. i.e the svg image for a given nft
+    def get_nfts(self, policy:str, force_update:bool=False):
+        total = self.policy_nft_count(policy)
+        # TODO update as minting happens?       
+        if 'nfts' not in self.policy_meta[policy].keys():
+            force_update = True 
+
+        if force_update:
+            svgs = {}
+            for i in range(total):
+                i = str(i).zfill(4)
+                svg_str = self.onchain_nft_to_svg(policy, i)
+                svgs[str(i)] = svg_str
+
+            meta721 = self.policy_meta[policy]['721']
+            meta722 =  self.policy_meta[policy]['722']       
+            self.policy_meta[policy] = {'721':meta721, '722':meta722, 'nfts':svgs}
+
+        return self.policy_meta[policy]['nfts']
 
     def onchain_nft_to_svg(self, policy:str, nft_id:str, force_update:bool=False):
         
