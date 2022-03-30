@@ -41,6 +41,11 @@ def get_nft(id):
     svg = t.onchain_nft_to_svg(POLICY, id)
     return svg
 
+@app.route("/nfts")
+def nfts():
+    return jsonify(t.get_nfts(POLICY))
+
+
 @app.route("/addr")
 def addr():
     return m.get_payment_addr()
