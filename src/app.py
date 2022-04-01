@@ -15,7 +15,7 @@ CORS(app)
 app.config["SERVER_NAME"] = "127.0.0.1:5225"
 
 mint_wallet = Wallet()
-#m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
+m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
 t = BlockFrostTools()
 #m.run()
 
@@ -46,13 +46,13 @@ def nfts():
     return jsonify(t.get_nfts(POLICY))
 
 
-@app.route("/addr")
+@app.route("/mint_addr")
 def addr():
-    return m.get_payment_addr()
+    return jsonify({"addr" : str(m.get_payment_addr()) })
 
-@app.route("/price")
+@app.route("/mint_price")
 def price():
-    return m.get_nft_price()
+    return jsonify({"price" : str(m.get_nft_price()) })
 
 
 #@app.route("/svg")
