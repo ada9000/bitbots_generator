@@ -229,7 +229,7 @@ class CardanoComms:
     def use_existing_policy(self):
         log_info("using existing policy")
         if not os.path.isfile(self.policy_id_path):
-            raise Exception("Not policy-id json at " + str(self.policy_id_path))
+            raise Exception("No policy-id json at " + str(self.policy_id_path))
         self.policy_id = read_file_return_data(self.policy_id_path)["id"]
         self.target_slot = read_file_return_data(self.slot_path)["slot"] 
 
@@ -916,4 +916,4 @@ class MintProcess:
         return self.wallet.addr
 
     def get_nft_price(self):
-        return self.price
+        return lace_to_ada(self.price)
