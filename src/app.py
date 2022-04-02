@@ -3,23 +3,23 @@ import base64
 import random
 
 from flask import Flask, jsonify, request
-from Bitbots import Bitbots
-from CardanoComms import *
-
 from flask_cors import CORS
-
 import urllib.parse
+
+from ApiManager import *
+from BlockFrostTools import BlockFrostTools
 
 app = Flask(__name__)
 CORS(app)
-app.config["SERVER_NAME"] = "127.0.0.1:5225"
 
-mint_wallet = Wallet()
-m = MintProcess(mint_wallet=mint_wallet, nft_price_ada=69)
+apiManager = ApiManager(mint_wallet=Wallet(), project="fulltest")
+#app.config["SERVER_NAME"] = "127.0.0.1:5225"
+
 t = BlockFrostTools()
 #m.run()
 
-POLICY = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
+#POLICY = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
+POLICY = "264ffa1e5e783cb31b7aeceac530d2054b60d1ee48c0a701d12246dd"
 
 # get all?
 @app.route("/")
@@ -48,11 +48,11 @@ def nfts():
 
 @app.route("/mint_addr")
 def addr():
-    return jsonify({"addr" : str(m.get_payment_addr()) })
+    return jsonify({"addr" : str(apiManager.get_payment_addr()) })
 
 @app.route("/mint_price")
 def price():
-    return jsonify({"price" : str(m.get_nft_price()) })
+    return jsonify({"price" : str(apiManager.get_nft_price()) })
 
 
 #@app.route("/svg")

@@ -1,9 +1,11 @@
+from Utility import NEW_CIP
+
 class Nft:
     def __init__(self, policyid:str="todo"):
 
         self.policyid = policyid
         self.nft_CIP = '721'
-        self.new_CIP = '722'
+        self.new_CIP = NEW_CIP
         # mime: data:image/svg+xml;utf8
 
     def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:list, nft_references:list, properties):
