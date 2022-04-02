@@ -715,9 +715,7 @@ class Bitbots:
             s = os.path.getsize(f)
 
             # if under size update current payload idx
-            log_debug("in first check " + str(s) + " < " + str(MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2)))
             if s < MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2):
-                log_error("in first check " + str(s) + " < " + str(MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2)))
                 self.current_payload_idx += 1
                 self.last_nft_with_payload = current_idx
                 nft_meta = nft_meta_tmp
