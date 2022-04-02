@@ -11,8 +11,8 @@ class Wallet:
         self.sub_dir = '' 
         if name != '':
             self.sub_dir = name + '/'
-            if not os.path.isdir(self.sub_dir):
-                os.mkdir(self.sub_dir)
+            if not os.path.isdir(WALLET_DIR + self.sub_dir):
+                os.mkdir(WALLET_DIR + self.sub_dir)
 
         self.addr = None
         self.addr_path  = WALLET_DIR + self.sub_dir + 'base.addr'
