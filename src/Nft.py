@@ -1,4 +1,5 @@
 from Utility import NEW_CIP
+import copy
 
 class Nft:
     def __init__(self, policyid:str="todo"):
@@ -55,3 +56,8 @@ class Nft:
                 }
         
         return meta
+
+    def append_more_data(self, meta, payload_ref:int, nft_payload:list):
+        new_meta = copy.deepcopy(meta)
+        new_meta[self.new_CIP][self.policyid][payload_ref] = nft_payload
+        return new_meta

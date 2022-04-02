@@ -76,6 +76,8 @@ class Bitbots:
         self.mint_idx = 0
         self.current_payload_idx = 0
 
+        self.last_nft_with_payload = None
+
         if project == '':
             raise Exception("No project defined")
         
@@ -143,10 +145,11 @@ class Bitbots:
         self.gen_payload_meta()
         log_info("Payload count is " + str(self.payload_index))
         if self.max_mint < self.payload_index:
-            raise Exception(str(self.payload_index) + " nfts required but max mint is " + str(self.payload_index))
+            #raise Exception(str(self.payload_index) + " nfts required but max mint is " + str(self.payload_index))
+            log_error(str(self.payload_index) + " nfts required but max mint is " + str(self.payload_index))
 
         # save state
-        state = {"payloads": self.payload_index, "current_payload_idx":0, "current_nft_idx":0, "max_nfts":self.max_mint}
+        state = {"payloads": self.payload_index, "current_payload_idx":0, "current_nft_idx":0, "max_nfts":self.max_mint, "last_nft_with_payload":"0"}
         write_json(self.nft_state_file, state)
         # create a random nft set!
 
@@ -588,6 +591,11 @@ class Bitbots:
     def set_status(self, idx, new_status=None, customer_addr=None, tx_hash=None):
         idx = str(idx)
         status = read_file_return_data(self.nft_status_file)
+        try:
+            status[idx]
+        except KeyError:
+            status[idx] = {"status":"", "tx_hash":"", "customer_addr":"", "nft_name":"extra", "meta_path":""}
+
         if new_status != None:
             status[idx]['status'] = new_status
         if customer_addr != None:
@@ -614,17 +622,24 @@ class Bitbots:
 
     # TODO MUTEX THIS METHOD
     def generate_next_nft(self, policy:str, customer_addr:str='', tx_hash=None, score:int=0, lobster:bool=False):
-        if self.mint_idx > (self.max_mint - 1):
-            return None
-        if customer_addr == '':
-            return None
-        
+            
+                
         # load config # TODO MUTEX
         state = read_file_return_data(self.nft_state_file)
         self.mint_idx = state["current_nft_idx"]
         self.payload_index = state["payloads"]
         self.current_payload_idx = state["current_payload_idx"]
         self.max_mint = state["max_nfts"]
+        
+        # CHECKS
+        if self.mint_idx >= self.max_mint:
+            if self.current_payload_idx > len(self.payload_data):
+                return None
+            else:
+                self.max_mint += 1
+                log_error("Max mint increased due to missing data that needs deploying to blockchain")
+        if customer_addr == '':
+            return None
 
 
         # check current idx
@@ -661,8 +676,6 @@ class Bitbots:
         # TODO update traits to reflect new current count        
 
         log_info("Created " + nft_name)
-        # append payloads
-        payload_refs = nft['refs']
 
         # payload
         nft_payload = None
@@ -672,10 +685,47 @@ class Bitbots:
                 nft_payload = self.payload_data[self.current_payload_idx]
             except KeyError as e:
                 nft_payload = self.payload_data[str(self.current_payload_idx)]
-
+            self.last_nft_with_payload = current_idx
 
         # nft meta
-        nft_meta = n.generate_nft(nft_name=nft_name, payload_ref=current_idx, nft_payload=nft_payload, nft_references=refs, properties=properties)
+        nft_meta = n.generate_nft(nft_name=nft_name, payload_ref=self.current_payload_idx, nft_payload=nft_payload, nft_references=refs, properties=properties)
+        self.current_payload_idx += 1 #TODO fit more payload into one nft
+
+        # TODO ------------ append more data here
+        valid_size = True
+        while valid_size:
+
+            # get payload data
+            try:
+                nft_payload = self.payload_data[self.current_payload_idx]
+            except KeyError as e:
+                try:
+                    nft_payload = self.payload_data[str(self.current_payload_idx)]
+                except KeyError as e:
+                    valid_size = False
+
+            if valid_size == False:
+                break
+            # append more data
+            nft_meta_tmp = n.append_more_data(meta=nft_meta, payload_ref=self.current_payload_idx, nft_payload=nft_payload)
+            
+            # check if we are still under size
+            f = self.nft_meta_dir + str(current_idx) + "_temp.json"
+            write_json(f, nft_meta_tmp)
+            s = os.path.getsize(f)
+
+            # if under size update current payload idx
+            log_debug("in first check " + str(s) + " < " + str(MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2)))
+            if s < MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2):
+                log_error("in first check " + str(s) + " < " + str(MAX_PAYLOAD_BYTES - (MAX_PAYLOAD_BYTES * 0.2)))
+                self.current_payload_idx += 1
+                self.last_nft_with_payload = current_idx
+                nft_meta = nft_meta_tmp
+            # too large exit without saving new changes
+            else:
+                valid_size = False
+            # remove tmp file
+            os.remove(f)
         
         f = self.nft_meta_dir + str(current_idx) + ".json"
         write_json(f ,nft_meta)
@@ -690,8 +740,8 @@ class Bitbots:
 
         # update state TODO note this is last
         self.mint_idx += 1
-        self.current_payload_idx += 1 #TODO fit more payload into one nft
-        state = {"payloads": self.payload_index, "current_payload_idx":self.current_payload_idx, "current_nft_idx":self.mint_idx, "max_nfts":self.max_mint}
+
+        state = {"payloads": self.payload_index, "current_payload_idx":self.current_payload_idx, "current_nft_idx":self.mint_idx, "max_nfts":self.max_mint, "last_nft_with_payload":self.last_nft_with_payload}
         write_json(self.nft_state_file, state)
         
         # update metapath
@@ -700,4 +750,3 @@ class Bitbots:
         write_json(self.nft_status_file, status)
 
         return current_idx
-        # return nft metajson file to user
