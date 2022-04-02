@@ -1,25 +1,23 @@
 import os
 import base64
 import random
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import urllib.parse
-
 from ApiManager import *
 from BlockFrostTools import BlockFrostTools
-
+# flask config ---------------------------------------------------------------
 app = Flask(__name__)
 CORS(app)
-
-apiManager = ApiManager(mint_wallet=Wallet(), project="fulltest")
-#app.config["SERVER_NAME"] = "127.0.0.1:5225"
-
+#app.config["SERVER_NAME"] = "127.0.0.1:5225" # TODO set this to ip + port
+# vars -----------------------------------------------------------------------
+mint_wallet = Wallet()
+price = 5
+max_mint = 60
+apiManager = ApiManager(mint_wallet=mint_wallet, project="fulltest", price=price, max_mint=max_mint)
 t = BlockFrostTools()
-#m.run()
+# ----------------------------------------------------------------------------
 
-#POLICY = "f681ff0a98086b3862f341c704b29faee8dbaafa2ea6279acf05d4a8"
-POLICY = "264ffa1e5e783cb31b7aeceac530d2054b60d1ee48c0a701d12246dd"
 
 # get all?
 @app.route("/")
@@ -32,18 +30,19 @@ def policy():
 
 @app.route("/nft_count")
 def get_count():
-    return jsonify({"count":t.policy_nft_count(POLICY)})
+    POLICY = "264ffa1e5e783cb31b7aeceac530d2054b60d1ee48c0a701d12246dd" # TODO use this to test
+    return jsonify({"count":t.policy_nft_count(apiManager.get_policy())})
 
 # you can now type nft/0001 to and the image will be returned
 # svg data is sourced from the Cardano blockchain!
 @app.route("/nft/<id>")
 def get_nft(id):
-    svg = t.onchain_nft_to_svg(POLICY, id)
+    svg = t.onchain_nft_to_svg(apiManager.get_policy(), id)
     return svg
 
 @app.route("/nfts")
 def nfts():
-    return jsonify(t.get_nfts(POLICY))
+    return jsonify(t.get_nfts(apiManager.get_policy()))
 
 
 @app.route("/mint_addr")
@@ -54,20 +53,11 @@ def addr():
 def price():
     return jsonify({"price" : str(apiManager.get_nft_price()) })
 
-
-#@app.route("/svg")
-#def svg():
-#    with open(filename_svg, 'r') as f:
-#        data = f.read()
-
-
-
 @app.route("/generate")
 def generate():
     b.generate()
     return "Done"
     # add post method 
-
 
 @app.route("/rand")
 def random_nft():
@@ -88,6 +78,3 @@ def showme():
     n = random.randint(0, 8192)
     test = nfts[str(n)]
     return test
-
-# TODO show svg image of nft
-# TODO request purchase
