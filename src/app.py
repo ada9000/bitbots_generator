@@ -24,14 +24,8 @@ t = BlockFrostTools()
 def home():
     return "Home"
 
-#@app.route("/policy", methods=['GET','POST'])
-#def policy():
-#    return t.return_all_meta()
-
-
 @app.route("/nft_count")
 def get_count():
-    POLICY = "264ffa1e5e783cb31b7aeceac530d2054b60d1ee48c0a701d12246dd" # TODO use this to test
     return jsonify({ "count": t.policy_nft_count(apiManager.get_policy()) })
 
 # you can now type nft/0001 to and the image will be returned
@@ -43,7 +37,6 @@ def get_nft(id):
 
 @app.route("/nfts")
 def nfts():
-    log_error(apiManager.get_policy())
     return jsonify(t.get_nfts(apiManager.get_policy()))
 
 @app.route("/policy")
