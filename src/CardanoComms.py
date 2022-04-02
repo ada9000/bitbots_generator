@@ -4,222 +4,57 @@ from distutils.log import debug
 from mimetypes import init
 import os
 from re import M
-import sys
-import json
-from subprocess import Popen, PIPE, STDOUT
-import subprocess
 import time
 from Bitbots import *
-import re
-from dotenv import load_dotenv
-from blockfrost import BlockFrostApi, ApiError, ApiUrls
 from threading import Thread, Lock
 import time
-
-# consts ---------------------------------------------------------------------
-MAINNET = "--mainnet"
-TESTNET = "--testnet-magic 1097911063"
-NETWORKS = [MAINNET, TESTNET]
-FILES_DIR = "../files/"
-POLICY_DIR = FILES_DIR + "policy/"
-WALLET_DIR = FILES_DIR + "wallet/"
-CARDANO_CLI_PATH = "cardano-cli"
-EMPTY_BYTE_STRING = "b\'\'"
-
-# global ---------------------------------------------------------------------
-purchase_mutex = Lock()
-
-# functions ------------------------------------------------------------------
-def cmd_out(cmd):
-    """ get the result of a shell command """
-    p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-    res =  p.stdout.read()
-    # if error raise exception
-    error_str = "Error"
-    if error_str in str(res):
-        log_error("Error" + str(res))
-    return res
-
-def replace_b_str(msg):
-    """ remove 'b' token and single quote from a str """
-    msg = str(msg)
-    # use regex to match all text between b'<target>'
-    re_res = re.findall(r'b\'(.*?)\'', msg)
-    for i, s in enumerate(re_res):
-        if i == 0:
-            msg = s
-        else:
-            msg += ','
-            msg += s
-    # replace any of the following symbols
-    msg = msg.replace('\'','')
-    msg = msg.replace('[','')
-    msg = msg.replace(']','')
-    return msg
-
-def ada_to_lace(x:float):
-    return x * 1000000
-
-def lace_to_ada(x:float):
-    return x / 1000000
-
-def check_files_exist(self, files:list):
-    """
-    Check a list of files and return True if they all exist,
-    return False if one or more don't exist
-    """
-    for f in files:
-        if os.path.isfile(f) == False:
-            return False
-    return True
-
-
+import base64
+from Wallet import *
+from datetime import datetime
 #-----------------------------------------------------------------------------
 # TODO make concurrent
 # [ ] ensure matx.raw and matx.signed are made conccurent i.e not read at the same time by diff processes
 # [ ] ensure mutex is placed over each nft
 
-#-----------------------------------------------------------------------------
-class Wallet:
-    def __init__(self, name:str='', network:str=TESTNET):
-        self.network    = network
-        self.name       = name
-        # add
-        sub_dir = '' 
-        if name != '':
-            sub_dir = name + '/'
-        self.addr = None
-        self.addr_path  = WALLET_DIR + sub_dir + 'base.addr'
-        self.skey       = WALLET_DIR + sub_dir + 'payment.skey'
-        self.vkey       = WALLET_DIR + sub_dir + 'payment.vkey'
-        # tx files are stored in a wallet
-        self.tx_raw     = WALLET_DIR + sub_dir + 'tx.raw'
-        self.tx_signed  = WALLET_DIR + sub_dir + 'tx.signed'
-        # check all required files exist
-        self.create_wallet()
-                #raise Exception("Missing " + f)
-        # set addr
-        if self.addr is None:
-            cmd = "cat " + self.addr_path
-            self.addr = replace_b_str(cmd_out(cmd))
-        # lace, nfts and transactions
-        self.lace = 0
-        self.nfts = []
-        self.txs  = []
-        log_debug("Wallet: " + self.name + " has addr " + self.addr)
-
-
-    def create_wallet(self):
-        # check for wallet 
-        wallet_dir = WALLET_DIR + self.name + "/"
-        if not os.path.isdir(WALLET_DIR):
-            os.mkdir(WALLET_DIR)
-        # create wallet dir 
-        if not os.path.isdir(wallet_dir):
-            os.mkdir(wallet_dir)
-        # return if ANY files are found
-        files = [self.addr_path, self.skey, self.vkey]
-        for f in files:
-            if os.path.isfile(f):
-                return
-        # create wallet keys
-        payment_keys = "cardano-cli address key-gen"+\
-            " --verification-key-file "+ self.vkey +\
-            " --signing-key-file " + self.skey
-        build_base = "cardano-cli address build"+\
-            " --payment-verification-key-file " + self.vkey +\
-            " --out-file " + self.addr_path + " " + self.network
-        res = cmd_out(payment_keys)
-        res = cmd_out(build_base)
-        log_debug("created new wallet \'" + self.name + "\'")
-        return
-
-
-    def update_utxos(self):
-        # query utxo
-        cmd = "cardano-cli query utxo --address " + self.addr + " " + self.network
-        res = cmd_out(cmd)
-        # remove header from utxo cmd output, convert to array of lines
-        utxos = res.strip().splitlines()
-        utxos = utxos[2:]
-        # init vars
-        lace_available = 0
-        lace_total = 0
-        nfts = []
-        txs = []
-        # get transaction index
-        for tx_idx in range(len(utxos)):
-            # tx lace tracks lace in current tx
-            tx_lace = 0
-            # get utxo from utxos
-            utxo = utxos[tx_idx].split()
-            # remove unwanted characters, cardano-cli is strict on whitespace
-            # convert back into an array
-            utxo = str(utxo)
-            utxo = replace_b_str(utxo)
-            utxo = utxo.split(',')
-            # check for utxos that contain nfts by looking for
-            # multiple tokens past the '+' token
-            # (note TxOutDatumNone is the terminating token, but is not needed)
-            utxo_has_nft = False
-            for i, token in enumerate(utxo):
-                if '+' in token:
-                    if i+2 < len(utxo):
-                        utxo_has_nft = True
-                        nfts.append( (utxo[i+1], utxo[i+2]) )
-            # ignore transactions with nfts in available lace
-            if utxo_has_nft == False:
-                try:
-                    lace_available += int(utxo[2])
-                except ValueError:
-                    log_debug("ValueError likely a socket issue")
-                    time.sleep(5)
-                    self.update_utxos()
-            tx_lace = int(utxo[2])
-            # calc total lace by adding lace attached to each uxto
-            lace_total += int(utxo[2])
-            # append all transactions with a boolean to announce nft present
-            txs.append( (utxo[0], utxo[1], tx_lace, utxo_has_nft) )
-        # log and assign
-        log_debug("addr  : " + COLOR_CYAN +self.addr)
-        log_debug("lace  : " + str(lace_available))
-        log_debug("total : " + str(lace_total))
-        self.lace   = lace_available
-        self.txs    = txs
-        # return type is [(tx_hash:str, tx_id:str, tx_lace, contains_nft:bool),...]
-        return self.txs
-
-    def look_for_lace(self, lace):
-        lace = int(lace)
-        while True:
-            logging.info("Waiting for " + str(lace) + " lace tx in \'" + self.addr + "\'...")
-            utxos = self.update_utxos()
-            for utxo in utxos:
-                tx_hash, tx_id, tx_lace, _ = utxo
-                if tx_lace == lace:
-                    # TODO this one is important \/
-                    # mutex tx_hash check here to ensure we don't mint twice
-                    # for a single utxo/tx_hash
-                    return tx_hash, tx_id
-            time.sleep(5)
 
 
 # ----------------------------------------------------------------------------
 class CardanoComms:
-    def __init__(self, network:str=TESTNET, new_policy:bool=False):
-        # check valid network
+    def __init__(self, network:str=TESTNET, new_policy:bool=False, project:str=''):
+        
+        # if the project is not-defined set it to the current date
+        if project == '':
+            new_policy = True
+            project = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        # define policy directory       
+        self.project_dir = PROJECT_DIR + project
+
+        # create project dir if missing
+        if not os.path.isdir(PROJECT_DIR):
+            os.mkdir(PROJECT_DIR)
+        # check for the project, if it doesn't exists create a new policy for it
+        if not os.path.isdir(self.project_dir):
+            os.mkdir(self.project_dir)
+            new_policy = True
+
+        # check for valid network
         if network not in NETWORKS:
             raise Exception("Invalid network please use one of the following \'" + str(NETWORKS) + "\'")
+        
+        # required file defintions
         self.network = network
-        self.policy_script  = POLICY_DIR + "policy.script"
-        self.policy_vkey    = POLICY_DIR + "policy.vkey"
-        self.policy_skey    = POLICY_DIR + "policy.skey"
-        self.slot_path      = POLICY_DIR + "slot.json"
-        self.policy_id_path = POLICY_DIR + "policy_id.json"
-        self.protocol_path  = POLICY_DIR + "protocol.json"
+        self.project_json   = self.project_dir + "/project.json" # TODO sort out multiple json files
+        self.policy_script  = self.project_dir + "/policy.script"
+        self.policy_vkey    = self.project_dir + "/policy.vkey"
+        self.policy_skey    = self.project_dir + "/policy.skey"
+        self.slot_path      = self.project_dir + "/slot.json"
+        self.policy_id_path = self.project_dir + "/policy_id.json"
+        self.protocol_path  = self.project_dir + "/protocol.json"
         self.target_slot    = None
         self.key_hash       = None
         self.policy_id      = None
+        
         # generate a new policy or use existing
         if new_policy:
             self.gen_policy()
@@ -233,17 +68,8 @@ class CardanoComms:
         self.policy_id = read_file_return_data(self.policy_id_path)["id"]
         self.target_slot = read_file_return_data(self.slot_path)["slot"] 
 
-    def clean(self):
-        # first backup
-        # then remove files
-        pass
-
     def gen_policy(self): # TODO 
         log_info("generating policy files...")
-        if not os.path.isdir(POLICY_DIR):
-            os.mkdir(POLICY_DIR)
-        else:
-            self.clean()
         # generate policy keys, check for err
         log_debug("creating policy keys")
         cmd = "cardano-cli address key-gen"+\
@@ -274,8 +100,8 @@ class CardanoComms:
         log_debug("querying tip")
         cmd = "cardano-cli query tip " + self.network + " | jq .slot?"
         current_slot = int(cmd_out(cmd))
-        # multiple expire time by 3600 seconds and add to amend inputed hours to the target slot
-        self.target_slot = current_slot + 8760 * 3600
+        # multiple expire time by 3600 seconds and add to amend inputted hours to the target slot
+        self.target_slot = current_slot + 8760 * 3600 # TODO allow user to pass this in
         write_json(self.slot_path, {"slot":self.target_slot})
         log_debug("slot current : " + str(current_slot))
         log_debug("slot target  : " + str(self.target_slot))
@@ -305,7 +131,7 @@ class CardanoComms:
 
     def add_policy_id_to_meta(self, metadata):
         fixed_meta = {}
-        # for 721 and 722 aka for cip iteration
+        # for 721 and new CIP aka for cip iteration
         for cip in metadata.keys():
             inner_keys = metadata[cip].keys()
             inner_data = {}
@@ -418,7 +244,6 @@ class CardanoComms:
             " --out-file " + mint_wallet.tx_raw
         # remove any double whitespace
         build_raw = build_raw.replace("  "," ")
-        print(build_raw)
         #log_debug(build_raw)
         # run build tx cmd
         res = cmd_out(build_raw)
@@ -496,6 +321,7 @@ class CardanoComms:
         return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
 
 
+    # TODO DEPRECATE OR IGNORE
     # nft mint ---------------------------------------------------------------
     def mint_nft(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet):
         # read meta and 'fix' (insert policy id into it)
@@ -558,7 +384,12 @@ class CardanoComms:
 
     def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path, txhash=None, txid=None):
         """ builds a nft transaction """
-        # build nft mint str (assume amount to be 1)
+        # set 
+        nft_id = nft_id.encode("utf-8")
+        nft_id = base64.b16encode(nft_id)
+        nft_id = replace_b_str(nft_id)
+
+        # build nft mint str (assume amount to be 1)        
         nft_mint_str = "\""
         nft_mint_str = nft_mint_str + "1" + " " + self.policy_id + "." + nft_id
         nft_mint_str = nft_mint_str + " \""
@@ -638,282 +469,5 @@ class CardanoComms:
         if 'Error' in res:
             log_error("something went wrong (socket?)")
             return False
-        transaction_sent = False
-        idx = 0
-        while not transaction_sent:
-            cmd = "cardano-cli query utxo --address "+ recv_addr + " " + self.network
-            #print(cmd)
-            res = cmd_out(cmd)
-            target = self.policy_id + "." + nft_id
-            target.strip() # remove any whitespace
-            if target in str(res):
-                transaction_sent = True
-                log_info("found tx, mint success \'" + target + "\'") #TODO do I need to check for policyid.nftnumber
-            else:
-                log_debug("tx not found waiting waiting..." + str(idx))
-                time.sleep(5)
-                idx += 1
+
         return True
-
-#-----------------------------------------------------------------------------
-class BlockFrostTools:
-    def __init__(self, network:str=TESTNET):
-        # set network url
-        self.b_url = ApiUrls.testnet.value
-        if network == MAINNET:
-            self.b_url = ApiUrls.mainnet.value
-        # get api key from .env
-        load_dotenv()
-        self.api_key = os.getenv('BLOCK_FROST_API_KEY')
-        if self.api_key is None:
-            raise Exception("No blockfrost api key. Update .env")
-        # init api
-        self.api = BlockFrostApi(
-            project_id=self.api_key,
-            base_url=self.b_url
-        )
-        self.health = self.health_query()
-
-        self.policy_meta = {}
-
-    def health_query(self):
-        return self.api.health()
-
-    def find_sender(self, txhash:str, recv_addr:str, lace):
-        lace = str(lace)
-        res = self.api.transaction_utxos(hash=txhash)
-
-        found_recv = False
-        target_addr = False
-        # TODO add check for lace?
-
-        # TODO deprecate this logic
-        for x in res.inputs:
-            if x.address == recv_addr:
-                found_recv = True
-        #END TODO ------
-        
-        # TODO what if multiple outputs i.e more than 2?
-        for x in res.outputs:
-            log_debug(x.address)
-            if x.address != recv_addr:
-                return x.address
-        return None
-
-        #print("outputs")
-        #print(res.inputs)
-
-
-    def utxo_query(self, txhash:str):
-        res = self.api.transaction_utxos(hash=txhash)
-        print(res)
-
-    def addr_query(self, addr:str):
-        address = self.api.address(address=addr)
-        print(address)
-        print(address.type)  # prints 'shelley'
-
-    def policy_to_json(self, policy:str):
-        assets = []
-        txs = []
-        meta721 = {}
-        meta722 = {}
-
-        # get asset from policy
-        res = self.api.assets_policy(policy)
-        for x in res:
-            assets.append(x.asset)
-
-        # get txs from asset
-        for x in assets:
-            tx = self.api.asset_transactions(x)
-            for y in tx:
-                txs.append(y.tx_hash)
-
-        # for each transaction related to an asset
-        for x in txs:
-            # obtain meta as json
-            meta = self.api.transaction_metadata(x, return_type='json')
-            log_debug("meta payload/s \'" + str(len(meta)) + " \'")
-            # for each CIP 
-            for i in range(len(meta)):
-                # get json specific json/dict keys
-                json_tag = 'json_metadata'
-                label = meta[i]['label']
-                policy_id =  list(meta[i][json_tag])[0]
-                mint_id =  list(meta[i][json_tag][policy_id])[0]
-                # each metadata type to it's own dict (optionally we could put it all in one json) 
-                if label == "721":
-                    log_debug("721")
-                    # get the metadata using the 721 standard
-                    meta721[mint_id] = meta[i][json_tag][policy_id][mint_id]
-                elif label == "722":
-                    log_debug("722")
-                    # for each datapackage in new CIP
-                    for ref in list(meta[i][json_tag][policy_id]):
-                        # add the payload to our json, store using the payload reference
-                        # as key to the contained payload data
-                        meta722[ref] = meta[i][json_tag][policy_id][ref]
-                else:
-                    log_error("Unknown label")
-        # return dict of 721 and 722
-        self.policy_meta[policy] = {'721':meta721, '722':meta722}
-        return meta721, meta722
-
-
-    def policy_nft_count(self, policy:str):
-        # if this is the first run convert policy to json
-        if policy not in self.policy_meta.keys():
-            self.policy_to_json(policy)
-        return len(self.policy_meta[policy]['721'])
-
-
-    # populate and return nft data. i.e the svg image for a given nft
-    def get_nfts(self, policy:str, force_update:bool=False):
-        total = self.policy_nft_count(policy)
-        # TODO update as minting happens?       
-        if 'nfts' not in self.policy_meta[policy].keys():
-            force_update = True 
-
-        if force_update:
-            svgs = {}
-            for i in range(total):
-                i = str(i).zfill(4)
-                svg_str = self.onchain_nft_to_svg(policy, i)
-                svgs[str(i)] = svg_str
-
-            meta721 = self.policy_meta[policy]['721']
-            meta722 =  self.policy_meta[policy]['722']       
-            self.policy_meta[policy] = {'721':meta721, '722':meta722, 'nfts':svgs}
-
-        return self.policy_meta[policy]
-
-    def onchain_nft_to_svg(self, policy:str, nft_id:str, force_update:bool=False):
-        
-        # if this is the first run convert policy to json
-        if policy in self.policy_meta.keys() and force_update:
-            self.policy_to_json(policy)
-        elif policy not in self.policy_meta.keys():
-            self.policy_to_json(policy)
-
-        # get the refs for the current nft_id
-        svg_str = ""
-        refs = self.policy_meta[policy]['721'][nft_id]['722']['ref']
-
-        # combine all payload strings into one svg string
-        for i in refs:
-            for data in self.policy_meta[policy]['722'][str(i)]:
-                svg_str += data
-        svg_str = svg_str.strip()
-
-        # TODO if write is needed
-        if False:
-            f = open("test.svg", "w")
-            f.write(svg_str)
-            f.close()
-        # return the svg string
-        return svg_str
-
-#-----------------------------------------------------------------------------
-#TODO refund Process
-
-#-----------------------------------------------------------------------------
-class MintProcess:
-    # TODO pass in reference to object of tx_ids
-    # with mutex when a process is processing a tx it adds it to list
-    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100, new_policy:bool=False):
-        if mint_wallet == None:
-            raise Exception('Wallet not valid')
-            #wallet = Wallet(name='', network=network)
-        
-        self.network = network
-        self.wallet = mint_wallet
-        self.bf_api = BlockFrostTools(network)
-        self.price  = ada_to_lace(nft_price_ada)
-        self.cc     = CardanoComms(network, new_policy)
-        self.search_mutex = Lock()
-
-    def set_tx_status(self):
-        # use mutex
-        pass
-
-    def set_nft_status(self):
-        # use mutex
-        pass
-
-    def find_next_available(self):
-        log_debug("search mutex acquire")
-        self.search_mutex.acquire()
-        name = None
-        try:
-            for filename in os.listdir(OUTPUT_DIR):
-                name = filename.split('.')[0]
-                if '.status' in filename:
-                    # get json from file
-                    status_path = OUTPUT_DIR + filename
-                    f = open(status_path)
-                    data = json.load(f)
-                    f.close()
-                    if data["status"] == "available":
-                        log_debug("Nft with name \'" + name + "\' available")
-                        # change status
-                        status = {'status':'in-progress'}
-                        write_json(status_path, status)
-                        log_debug("Nft \'" + idx + "\' status set to sold")
-                        break
-                    else:
-                        name = None
-            name = None
-        finally:
-            log_debug("search mutex relase")
-            self.search_mutex.release()
-            return name
-
-
-    def run(self):
-        idx = self.find_next_available()
-
-        if idx == None:
-            log_debug("All minted ensure app enters refund mode")
-            return True
-            #raise Exception("App must go into refund mode")
-
-
-        txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
-        print("hash")
-        log_error(txhash)
-        print("id")
-        log_error(tx_id)
-        customer_addr = None
-        while not customer_addr:
-            customer_addr = self.bf_api.find_sender(
-                txhash=txhash, 
-                recv_addr=self.wallet.addr, 
-                lace=self.price)
-            if customer_addr is None:
-                time.sleep(20)
-
-        
-        meta_path = OUTPUT_DIR + idx + ".json"
-        # TODO 
-        # meta_path = get_nft_id_db()
-        log_debug("Nft \'" + idx + "\' attempting mint to \'" + customer_addr + "\'")
-        res = False
-        # loop here
-        while not res:
-            log_error("attempting mint for " + customer_addr)
-            res = self.cc.mint_nft_using_txhash(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet, tx_hash=txhash, tx_id=tx_id, price=self.price)
-        log_error("TX success")
-        if res != False:
-            status_path = OUTPUT_DIR + idx + ".status"
-            status = {'status':'sold'}
-            write_json(status_path, status)
-            log_debug("Nft \'" + idx + "\' status set to sold")
-        
-        return False
-
-    def get_payment_addr(self):
-        return self.wallet.addr
-
-    def get_nft_price(self):
-        return lace_to_ada(self.price)
