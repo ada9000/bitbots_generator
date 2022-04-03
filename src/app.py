@@ -14,7 +14,8 @@ CORS(app)
 mint_wallet = Wallet()
 price = 5
 max_mint = 12
-apiManager = ApiManager(mint_wallet=mint_wallet, project="TEST3", nft_price_ada=price, max_mint=max_mint)
+project = "NEW_FAKE_MINT3"
+apiManager = ApiManager(mint_wallet=mint_wallet, project=project, nft_price_ada=price, max_mint=max_mint)
 t = BlockFrostTools()
 # ----------------------------------------------------------------------------
 
@@ -22,12 +23,14 @@ t = BlockFrostTools()
 # get all?
 @app.route("/")
 def home():
-    return "Home"
+    return "Home", 200
 
+# TODO incorrect usage here
 @app.route("/nft_count")
 def get_count():
     return jsonify({ "count": t.policy_nft_count(apiManager.get_policy()) })
 
+# Cardano NFT actions --------------------------------------------------------
 # you can now type nft/0001 to and the image will be returned
 # svg data is sourced from the Cardano blockchain!
 @app.route("/nft/<id>")
@@ -39,6 +42,24 @@ def get_nft(id):
 def nfts():
     return jsonify(t.get_nfts(apiManager.get_policy()))
 
+
+#@app.route("/random_nfts")
+#def nfts():
+#    return jsonify(t.get_nfts(apiManager.get_policy()))
+
+# local nft actions ----------------------------------------------------------
+@app.route("/nft_svg/<id>")
+def get_nft_svg(id):
+    svg = apiManager.get_nft_svg(id)
+    return jsonify({"svg":svg})
+
+@app.route("/nft_meta/<id>")
+def get_nft_meta(id):
+    meta = apiManager.get_nft_meta(id)
+    return jsonify({"meta":meta})
+
+
+# Mint actions ---------------------------------------------------------------
 @app.route("/policy")
 def policy():
     return jsonify({"policy" : str(apiManager.get_policy()) })
@@ -50,29 +71,3 @@ def addr():
 @app.route("/mint_price")
 def price():
     return jsonify({"price" : str(apiManager.get_nft_price()) })
-
-@app.route("/generate")
-def generate():
-    b.generate()
-    return "Done"
-    # add post method 
-
-@app.route("/rand")
-def random_nft():
-    n = random.randint(0, 8192)
-    print("sending...")
-    return jsonify(nfts[str(n)])
-
-@app.route("/test")
-def test():
-    n = random.randint(0, 8192)
-    print("sending...")
-    test = nfts[str(n)]
-    test = urllib.parse.quote(test)
-    return test
-
-@app.route("/showme")
-def showme():
-    n = random.randint(0, 8192)
-    test = nfts[str(n)]
-    return test
