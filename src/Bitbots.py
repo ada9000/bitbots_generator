@@ -34,8 +34,8 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-INPUT_DIR = "../input-testnet/"
-MINT_MAX = 60
+#INPUT_DIR = "../input-testnet/"
+#MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
 # [ ] implent id special tag
@@ -605,7 +605,6 @@ class Bitbots:
         pass
 
     def set_status(self, idx, new_status=None, customer_addr=None, tx_hash=None):
-        log_error(str(idx))
         idx = str(idx)
         status = read_file_return_data(self.nft_status_file)
         try:
@@ -652,6 +651,7 @@ class Bitbots:
         try:
             _ = status[idx]
         except:
+            log_error("idx error when getting meta")
             return None
         data = read_file_return_data(status[idx]['meta_path'])
         return data
@@ -662,6 +662,7 @@ class Bitbots:
         try:
             _ = status[idx]
         except:
+            log_error("idx error when getting svg")
             return None
         # read full file to str
         #open text file in read mode
@@ -671,6 +672,13 @@ class Bitbots:
         #close file
         text_file.close()
         return data
+
+    def get_all_names(self):
+        status = read_file_return_data(self.nft_status_file)
+        names = []
+        for i in status:
+            names.append(i)
+        return names
 
 
     # TODO MUTEX THIS METHOD

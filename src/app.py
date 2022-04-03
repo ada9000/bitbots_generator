@@ -14,7 +14,7 @@ CORS(app)
 mint_wallet = Wallet()
 price = 5
 max_mint = 12
-project = "NEW_FAKE_MINT3"
+project = "FULL_DATA"
 apiManager = ApiManager(mint_wallet=mint_wallet, project=project, nft_price_ada=price, max_mint=max_mint)
 t = BlockFrostTools()
 # ----------------------------------------------------------------------------
@@ -48,6 +48,24 @@ def nfts():
 #    return jsonify(t.get_nfts(apiManager.get_policy()))
 
 # local nft actions ----------------------------------------------------------
+@app.route("/nft_id", methods=['GET'])
+def get_nft_id():
+    id = None
+    svg = None
+    meta = None
+    try:
+        id = request.args.get('id')
+        svg = apiManager.get_nft_svg(id)
+        meta = apiManager.get_nft_meta(id)
+    except:
+        return '', 300
+
+    if svg == None or meta == None:
+        return '', 300
+
+    return jsonify({"svg":svg, "meta":meta})
+
+
 @app.route("/nft_svg/<id>")
 def get_nft_svg(id):
     svg = apiManager.get_nft_svg(id)
@@ -57,6 +75,11 @@ def get_nft_svg(id):
 def get_nft_meta(id):
     meta = apiManager.get_nft_meta(id)
     return jsonify({"meta":meta})
+
+@app.route("/nft_names")
+def get_nft_names():
+    names = apiManager.get_names()
+    return jsonify({"names":names})
 
 
 # Mint actions ---------------------------------------------------------------
