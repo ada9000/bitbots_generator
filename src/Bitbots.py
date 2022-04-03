@@ -605,6 +605,15 @@ class Bitbots:
         
         write_json(self.nft_status_file, status)
     
+    def find_status(self, status_to_find):
+        status = read_file_return_data(self.nft_status_file)
+        for idx in status:
+            if status[idx]['status'] == status_to_find:
+                return status[idx]['tx_hash']
+        return None
+
+
+
     def get_status(self, idx):
         idx = str(idx)
         status = read_file_return_data(self.nft_status_file)
@@ -680,6 +689,7 @@ class Bitbots:
         # payload
         nft_payload = None
 
+        # TODO check if NFT should have property for holding data here?
         if self.current_payload_idx < len(self.payload_data):
             try:
                 nft_payload = self.payload_data[self.current_payload_idx]
