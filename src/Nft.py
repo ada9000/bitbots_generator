@@ -35,8 +35,8 @@ class Nft:
                     self.policyid:{
                         nft_name:nft_details
                         },
-                    }, 
                     'version':self.version,
+                    }, 
                 self.new_CIP:{
                     self.policyid:{
                         str(payload_ref):nft_payload
@@ -49,9 +49,9 @@ class Nft:
                 self.nft_CIP:{
                     self.policyid:{
                         nft_name:nft_details
-                        }
-                    },
+                        },
                     'version':self.version,
+                    },
                 }
         return meta
 
