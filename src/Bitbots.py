@@ -98,9 +98,12 @@ class Bitbots:
         self.nft_mint_data_file     = self.project_dir + "_nft-mint-data.json" # TODO ensure is created
 
         # TODO
-        self.nft_meta_dir         = self.project_dir + "svgs/"
+        self.nft_meta_dir         = self.project_dir + "meta/"
+        self.nft_svg_dir          = self.project_dir + "svgs/"
         if not os.path.isdir(self.nft_meta_dir):
             os.mkdir(self.nft_meta_dir)
+        if not os.path.isdir(self.nft_svg_dir):
+            os.mkdir(self.nft_svg_dir)
 
         required_files = [self.attributes_meta_file, self.traits_meta_file, self.nft_weights_file, self.nft_payload_file, self.nft_state_file]
         if not check_files_exist(required_files):
@@ -158,7 +161,8 @@ class Bitbots:
         
         for i in range(self.max_mint):
             nft_name = 'Bitbot 0x' + hex(i)[2:].zfill(4)
-            status_json[str(i)] = {"status":"", "tx_hash":"", "customer_addr":"", "nft_name":nft_name, "meta_path":""}
+            i = hex(i)[2:].zfill(4).upper()
+            status_json[str(i)] = {"status":"", "tx_hash":"", "customer_addr":"", "nft_name":nft_name, "meta_path":"", "svg_path":""}
         write_json(self.nft_status_file, status_json)
 
 
@@ -166,7 +170,7 @@ class Bitbots:
         # TODO deprecate to usage for output only
         self.generate_random_set()
         # populate output with svgs
-        self.svg_from_nft_data()
+        self.nft_set_to_svg()
         # create nft that conforms to CIP's
         self.create_cardano_nft()
 
@@ -272,7 +276,7 @@ class Bitbots:
         write_json(self.attributes_meta_file, self.nft_attributes)
 
 
-    def svg_from_nft_data(self):
+    def nft_set_to_svg(self):
         """ populate OUTPUT_DIR with svg files of each nft in our set """
         for n in self.nft_set_data:
             filename = OUTPUT_DIR + str(n) + ".svg"
@@ -286,7 +290,19 @@ class Bitbots:
             with open(filename, "w") as f:
                 f.write(svg_str)
 
+    def nft_to_svg(self, path, refs):
+            svg_str = ""
+            for i in refs:
+                try:
+                    for line in self.payload_data[i]:
+                        svg_str += line
+                except KeyError:
+                    for line in self.payload_data[str(i)]:
+                        svg_str += line
 
+            with open(path, "w") as f:
+                f.write(svg_str)
+    
     def update_weights(self):
         """ 
         creates NFT_WEIGHTS_FILE if it doesn't exists,
@@ -589,6 +605,7 @@ class Bitbots:
         pass
 
     def set_status(self, idx, new_status=None, customer_addr=None, tx_hash=None):
+        log_error(str(idx))
         idx = str(idx)
         status = read_file_return_data(self.nft_status_file)
         try:
@@ -624,15 +641,40 @@ class Bitbots:
         status = read_file_return_data(self.nft_status_file)
         return status[idx]['customer_addr']
 
-    def get_meta(self, idx):
+    def get_meta_path(self, idx):
         idx = str(idx)
         status = read_file_return_data(self.nft_status_file)
         return status[idx]['meta_path']
 
+    def get_meta(self, idx):
+        idx = str(idx).upper()
+        status = read_file_return_data(self.nft_status_file)
+        try:
+            _ = status[idx]
+        except:
+            return None
+        data = read_file_return_data(status[idx]['meta_path'])
+        return data
+
+    def get_svg(self, idx):
+        idx = str(idx).upper()
+        status = read_file_return_data(self.nft_status_file)
+        try:
+            _ = status[idx]
+        except:
+            return None
+        # read full file to str
+        #open text file in read mode
+        text_file = open(status[idx]['svg_path'], "r")
+        #read whole file to a string
+        data = text_file.read()
+        #close file
+        text_file.close()
+        return data
+
+
     # TODO MUTEX THIS METHOD
     def generate_next_nft(self, policy:str, customer_addr:str='', tx_hash=None, score:int=0, lobster:bool=False):
-            
-                
         # load config # TODO MUTEX
         state = read_file_return_data(self.nft_state_file)
         self.mint_idx = state["current_nft_idx"]
@@ -659,7 +701,8 @@ class Bitbots:
         self.payload_index
         
         # set customer
-        self.set_status(idx=current_idx, customer_addr=customer_addr, tx_hash=tx_hash)
+        nft_idx = hex(current_idx)[2:].zfill(4).upper()
+        self.set_status(idx=nft_idx, customer_addr=customer_addr, tx_hash=tx_hash)
 
         # generate random nft
         nft = {}
@@ -675,8 +718,8 @@ class Bitbots:
             while hex_hash not in used_hashes:
                 hex_hash, properties = self.gen_random_props()  
         # apply refs
-        nft_name = 'Bitbot 0x' + hex(current_idx)[2:].zfill(4) # TODO get name from json
-        nft_number = '0x' + hex(current_idx)[2:].zfill(4)
+        nft_name = 'Bitbot 0x' + hex(current_idx)[2:].zfill(4).upper() # TODO get name from json
+        nft_number = '0x' + hex(current_idx)[2:].zfill(4).upper()
 
         refs = self.find_refs_for_props(properties, nft_number)
         # save nft with padded number i.e 0001,...,1111,...,n
@@ -720,7 +763,7 @@ class Bitbots:
             nft_meta_tmp = n.append_more_data(meta=nft_meta, payload_ref=self.current_payload_idx, nft_payload=nft_payload)
             
             # check if we are still under size
-            f = self.nft_meta_dir + str(current_idx) + "_temp.json"
+            f = self.nft_meta_dir + nft_idx + "_temp.json"
             write_json(f, nft_meta_tmp)
             s = os.path.getsize(f)
 
@@ -735,10 +778,13 @@ class Bitbots:
             # remove tmp file
             os.remove(f)
         
-        f = self.nft_meta_dir + str(current_idx) + ".json"
+        # write meta json
+        f = self.nft_meta_dir + nft_idx + ".json"
         write_json(f ,nft_meta)
-        # write json files
         
+        # write svg
+        f_svg = self.nft_svg_dir + nft_idx + ".svg"
+        self.nft_to_svg(path=f_svg, refs=refs)
 
         # check file size
         s = os.path.getsize(f)
@@ -749,12 +795,17 @@ class Bitbots:
         # update state TODO note this is last
         self.mint_idx += 1
 
-        state = {"payloads": self.payload_index, "current_payload_idx":self.current_payload_idx, "current_nft_idx":self.mint_idx, "max_nfts":self.max_mint, "last_nft_with_payload":self.last_nft_with_payload}
+        state = {"payloads": self.payload_index,
+            "current_payload_idx":self.current_payload_idx, 
+            "current_nft_idx":self.mint_idx, 
+            "max_nfts":self.max_mint, 
+            "last_nft_with_payload":self.last_nft_with_payload
+        }
         write_json(self.nft_state_file, state)
         
         # update metapath
         status = read_file_return_data(self.nft_status_file)
-        status[str(current_idx)]['meta_path'] = f
+        status[nft_idx]['svg_path'] = f_svg
+        status[nft_idx]['meta_path'] = f
         write_json(self.nft_status_file, status)
-
-        return current_idx
+        return nft_idx
