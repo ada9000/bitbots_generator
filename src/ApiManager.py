@@ -51,6 +51,15 @@ class ApiManager:
         return True
 
     def run(self):
+        # add process for minting 
+        #   - shall go through reserved list and mint said nft
+        # add process for checking txs
+        #   - shall use mutex to reserve nft if found
+        #   - shall assign tx and addr to nft
+        #   - 
+
+        # TODO load reserved list
+
         # first complete all pending
 
         txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
