@@ -129,6 +129,7 @@ class CardanoComms:
         write_json(self.policy_id_path, {"id":self.policy_id})
         log_info("policy files generated")
 
+    # deprecate
     def add_policy_id_to_meta(self, metadata):
         fixed_meta = {}
         # for 721 and new CIP aka for cip iteration
@@ -258,7 +259,7 @@ class CardanoComms:
     def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, tx_hash, tx_id, price):
         # read meta and 'fix' (insert policy id into it)
         metadata = read_file_return_data(metadata_path)
-        nft_id, metadata = self.add_policy_id_to_meta(metadata)
+        nft_id = list(metadata['721'][self.policy_id].keys())[0]
         # set min mint costs and arbitrary change value
         #log_debug("nft-id: " + nft_id)
         change = 0 # 1.5 ada
