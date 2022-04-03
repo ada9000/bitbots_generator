@@ -55,7 +55,7 @@ class ApiManager:
 
         txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
         # if tx hash exists in meta ignore
-        idx = self.bb.check_hash_exists(txhash)
+        idx = self.bb.check_hash_exists(txhash) # TODO why is this correct behavior
 
         print("hash")
         log_error(txhash)
@@ -100,7 +100,7 @@ class ApiManager:
             return True
             #raise Exception("App must go into refund mode")
 
-        meta_path = self.bb.get_meta(idx)
+        meta_path = self.bb.get_meta_path(idx)
         # TODO 
         # meta_path = get_nft_id_db()
         log_debug("Nft \'" + str(idx) + "\' attempting mint to \'" + customer_addr + "\'")
@@ -133,4 +133,14 @@ class ApiManager:
     def fake_mint(self):
         idx = ""
         while idx != None:
+            log_error("idx " + idx)
             idx = self.bb.generate_next_nft(policy=self.get_policy(), customer_addr="false_addr", tx_hash="false_hash")
+
+    def get_minted_nfts(self):
+        pass
+
+    def get_nft_svg(self, nft_id):
+        return self.bb.get_svg(idx=nft_id)
+
+    def get_nft_meta(self, nft_id):
+        return self.bb.get_meta(idx=nft_id)
