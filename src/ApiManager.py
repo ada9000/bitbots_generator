@@ -47,10 +47,11 @@ class ApiManager:
     def get_nft_price(self):
         return lace_to_ada(self.price)
 
+    def meets_addr_rules(self, addr):
+        return True
 
     def run(self):
         # first complete all pending
-
 
         txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
         # if tx hash exists in meta ignore
@@ -87,6 +88,11 @@ class ApiManager:
                 log_debug("search mutex relase")
                 self.search_mutex.release()
 
+        # TODO check for mints that failed due to restart here
+        if idx == None:
+            # get tx_id # TODO
+            #idx, customer_addr, tx_hash = self.bb.find_status(STATUS_IN_PROGRESS)
+            pass
 
         if idx == None:
             log_debug("All minted ensure app enters refund mode")
@@ -124,3 +130,7 @@ class ApiManager:
         
         return False
 
+    def fake_mint(self):
+        idx = ""
+        while idx != None:
+            idx = self.bb.generate_next_nft(policy=self.get_policy(), customer_addr="false_addr", tx_hash="false_hash")
