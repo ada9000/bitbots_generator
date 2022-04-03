@@ -56,7 +56,6 @@ class ApiManager:
         # add process for checking txs
         #   - shall use mutex to reserve nft if found
         #   - shall assign tx and addr to nft
-        #   - 
 
         # TODO load reserved list
 
@@ -142,11 +141,11 @@ class ApiManager:
     def fake_mint(self):
         idx = ""
         while idx != None:
-            log_error("idx " + idx)
             idx = self.bb.generate_next_nft(policy=self.get_policy(), customer_addr="false_addr", tx_hash="false_hash")
+            self.bb.set_status(idx=idx, new_status=STATUS_SOLD)
 
-    def get_minted_nfts(self):
-        pass
+    def get_names(self):
+        return self.bb.get_all_names()
 
     def get_nft_svg(self, nft_id):
         return self.bb.get_svg(idx=nft_id)
