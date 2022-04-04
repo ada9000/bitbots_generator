@@ -1,8 +1,32 @@
-# Potential usage
+# Setup sql
 
+Setup mysql
+```
+sudo apt update
+sudo apt install mysql-server
+sudo systemctl start mysql.service
+sudo mysql_secure_installation
+```
+Create sql user (as super user)
+```
+sudo mysql
+CREATE USER '<USER>'@'localhost' IDENTIFIED BY '<PASS>';
+GRANT ALL PRIVILEGES ON *.* TO '<USER>'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+exit
+```
+
+Note db lives at
+/var/lib/mysql/<DB_NAME>
+
+# Running
+Start api
+```flask run --host=<IP> --port=<PORT>```
+
+
+# Potential usage
 - API looks for policy
 - IF nfts available to mint mint process starts
-
 
 
 # DB schema
