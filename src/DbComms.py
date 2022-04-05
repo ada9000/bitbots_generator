@@ -9,11 +9,12 @@ HOST='localhost'
 USER='jack'
 
 class DbComms:
-    def __init__(self, dbName:str=''):
+    def __init__(self, dbName:str='', maxMint:int=8192):
         # check for dbName
         if dbName == '':
             raise Exception("Missing db name parameter")
         self.dbName = "test_" + dbName # TODO note test
+        self.maxMint = maxMint
         # get password
         load_dotenv()
         self.password = os.getenv('DB_PASSWORD')
@@ -97,6 +98,7 @@ class DbComms:
         sql = "UPDATE " + table + " SET " + values + " WHERE " + where
         log_error(sql)
         self.db_cursor.execute(sql)
+        self.conn.commit()
         res = self.db_cursor.fetchall()
         for x in res:
             log_debug(str(x))
@@ -135,10 +137,18 @@ class DbComms:
         other += "customer VARCHAR(255), "
         other += "nftName VARCHAR(255), "
         other += "metaFilePath VARCHAR(255), "
-        other += "meta VARCHAR(1500), "
+        other += "svgFilePath VARCHAR(255), "
         other += "price VARCHAR(10)"
         self.create_table(tableName=tableName, other=other)
 
+    #d.update("status", "status='cake'", "hexId='0000'")
+    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath):
+        updates = "nftName='" + nftName + "', "
+        updates += "metaFilePath='" + metaFilePath + "', "
+        updates += "svgFilePath='" + svgFilePath + "'"
+        where = "hexId='" + hexId + "'"
+        self.update("status", updates, where)
+    
     def customer_purchase_detected():
         # select next not taken
         pass
@@ -147,7 +157,7 @@ class DbComms:
         values = []
         sql = "INSERT INTO status "
         sql +="(hexId, status) VALUES (%s, %s)" 
-        for i in range(8192): # TODO note this is max mint number
+        for i in range(self.maxMint):
             values.append((
                 int_to_hex_id(i),
                 "available"
@@ -162,7 +172,8 @@ class DbComms:
                 raise err
 
         log_debug(str(self.db_cursor.rowcount) + " inserted")
-    
+
+"""
 if __name__ == "__main__":
     d = DbComms(dbName="hello")
     d.show_tables()
@@ -171,3 +182,4 @@ if __name__ == "__main__":
     d.update("status", "status='cake'", "hexId='0000'")
     d.select("*","status","hexId='0000'")
     d.delete_db()
+"""

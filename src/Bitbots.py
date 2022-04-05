@@ -9,6 +9,7 @@ import base64
 import random
 import re
 import sys
+import shutil
 from DbComms import DbComms
 # local files
 from Nft import *
@@ -85,8 +86,7 @@ class Bitbots:
             os.mkdir(self.project_dir)
 
         # db
-        self.db = DbComms(dbName=project)
-        
+        self.db = DbComms(dbName=project, maxMint=self.max_mint)
         # define files
         self.traits_meta_file       = self.project_dir + "_nft-trait-meta.json"
         self.attributes_meta_file   = self.project_dir + "_nft-attributes-meta.json"
@@ -103,6 +103,10 @@ class Bitbots:
         
         self.generate()
 
+        print("about to clean type continue ")
+        breakpoint() # TODO testing only
+        self.clean() # TODO testing only
+
     def generate(self):
         # check to see if project exists TODO
         # clean and get data from files
@@ -116,11 +120,11 @@ class Bitbots:
 
     def clean(self):
         """ clean files """
-        os.rmdir(self.nft_meta_dir)
+        shutil.rmtree(self.nft_meta_dir)
         os.mkdir(self.nft_meta_dir)
-        os.rmdir(self.nft_svg_dir)
+        shutil.rmtree(self.nft_svg_dir)
         os.mkdir(self.nft_svg_dir)
-        #self.db.delete_db() # TODO
+        self.db.delete_db() # TODO
 
     # Input to metadata ------------------------------------------------------
     def nft_meta_inner(self, attribute:str, id_num:int, data:str):
@@ -218,17 +222,20 @@ class Bitbots:
 
     # convert nft meta to svg ------------------------------------------------
     def nft_to_svg(self, path, refs):
-            svg_str = ""
-            for i in refs:
-                try:
-                    for line in self.payload_data[i]:
-                        svg_str += line
-                except KeyError:
-                    for line in self.payload_data[str(i)]:
-                        svg_str += line
+        svg_str = ""
+        for i in refs:
+            try:
+                for line in self.payload_data[i]:
+                    svg_str += line
+            except KeyError:
+                for line in self.payload_data[str(i)]:
+                    svg_str += line
 
-            with open(path, "w") as f:
-                f.write(svg_str)
+        with open(path, "w") as f:
+            f.write(svg_str)
+        
+        return svg_str
+            
     
     # weights ----------------------------------------------------------------
     def update_weights(self):
@@ -636,18 +643,20 @@ class Bitbots:
                     # remove tmp file
                     os.remove(f)
             # write meta json ----------------------------------------------------
-            f = self.nft_meta_dir + nft_idx + ".json"
-            write_json(f ,nft_meta)
+            meta_file_path = self.nft_meta_dir + nft_idx + ".json"
+            write_json(meta_file_path ,nft_meta)
             # write svg ----------------------------------------------------------
-            f_svg = self.nft_svg_dir + nft_idx + ".svg"
-            self.nft_to_svg(path=f_svg, refs=refs)
+            svg_file_path = self.nft_svg_dir + nft_idx + ".svg"
+            self.nft_to_svg(path=svg_file_path, refs=refs)
             # check file size
-            s = os.path.getsize(f)
+            s = os.path.getsize(meta_file_path)
             if s > MAX_PAYLOAD_BYTES:
-                raise Exception("File \'" + f + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
-
-            # TODO add to DB HERE
-
+                raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
+            # update the database to include the nft details (could be more efficient, not required though)
+            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path)
             # nft created
+            self.db.select("*","status","hexId='"+nft_idx+"'")
             log_info("Created " + nft_name)
-            mint_idx += 1        
+            mint_idx += 1
+        log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
+        log_error("don't forget to generate policy first") # TODO REMOVE this comment
