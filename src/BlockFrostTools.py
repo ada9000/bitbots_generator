@@ -13,7 +13,7 @@ class BlockFrostTools:
         # get api key from .env
         load_dotenv()
         self.api_key = os.getenv('BLOCK_FROST_API_KEY')
-        if self.api_key is None:
+        if self.api_key == None:
             raise Exception("No blockfrost api key. Update .env")
         # init api
         self.api = BlockFrostApi(
