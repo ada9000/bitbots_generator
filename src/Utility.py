@@ -95,3 +95,7 @@ def ada_to_lace(x:float):
 
 def lace_to_ada(x:float):
     return x / 1000000
+
+# MISC -----------------------------------------------------------------------
+def int_to_hex_id(x:int):
+    return hex(x)[2:].zfill(4).upper()
