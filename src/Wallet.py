@@ -162,15 +162,14 @@ class Wallet:
 
     def find_txs_containing_lace_amount(self, lace):
         lace = int(lace)
-        while True:
-            txHashIdList = []
-            utxos = self.update_utxos()
-            for utxo in utxos:
-                tx_hash, tx_id, tx_lace, _ = utxo
-                if tx_lace == lace:
-                    # TODO this one is important \/
-                    # mutex tx_hash check here to ensure we don't mint twice
-                    # for a single utxo/tx_hash
-                    txHashIdList.append( (tx_hash, tx_id) )
-            return txHashIdList
+        txHashIdList = []
+        utxos = self.update_utxos()
+        for utxo in utxos:
+            tx_hash, tx_id, tx_lace, _ = utxo
+            if tx_lace == lace:
+                # TODO this one is important \/
+                # mutex tx_hash check here to ensure we don't mint twice
+                # for a single utxo/tx_hash
+                txHashIdList.append( (tx_hash, tx_id) )
+        return txHashIdList
 
