@@ -51,7 +51,7 @@ MAX_PAYLOAD_BYTES = 14000
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
-    def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, project:str=None, policy:str=None):
+    def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, project:str=None, policy:str=None, adaPrice:str=None):
         # check args
         if project == None:
             raise Exception("No project defined")
@@ -86,7 +86,7 @@ class Bitbots:
             os.mkdir(self.project_dir)
 
         # db
-        self.db = DbComms(dbName=project, maxMint=self.max_mint) # TODO PASS IN PRICE
+        self.db = DbComms(dbName=project, maxMint=self.max_mint, adaPrice=adaPrice) # TODO PASS IN PRICE
         # define files
         self.traits_meta_file       = self.project_dir + "_nft-trait-meta.json"
         self.attributes_meta_file   = self.project_dir + "_nft-attributes-meta.json"
