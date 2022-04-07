@@ -13,7 +13,7 @@ HOST='localhost'
 USER='jack'
 
 STATUS_AVAILABLE            = "available"
-STATUS_AWAITING_PAYMANET    = "awaiting-payment"
+#STATUS_AWAITING_PAYMANET    = "awaiting-payment"
 STATUS_AWAITING_MINT        = "awaiting-mint"
 STATUS_IN_PROGRESS          = "minting" # this state is required in case of hard failure, in which something may or maynot have minted
 STATUS_SOLD                 = "sold"
@@ -170,8 +170,9 @@ class DbComms:
         tableName = NFT_STATUS_TABLE
         other =  "hexId VARCHAR(4) PRIMARY KEY, "
         other += "status VARCHAR(255), "
-        other += "txHash VARCHAR(255), "
-        other += "customer VARCHAR(255), "
+        other += "txHash VARCHAR(100), "
+        other += "txId VARCHAR(100), "
+        other += "customerAddr VARCHAR(255), "
         other += "nftName VARCHAR(255), "
         other += "metaFilePath VARCHAR(255), "
         other += "svgFilePath VARCHAR(255), "
@@ -267,12 +268,60 @@ class DbComms:
         # session timeout. And we want the customer to be able to view a link to know current status
         return price # TODO note a customer could keep spaming this function and then no would be available TODO TODO
 
-    def customer_purchase_detected(self):
-        # select next available
-        # set date
 
+    def sold_out(self):
+        # get all nfts that don't have the sold status
+        where = "status!='" + STATUS_SOLD + "'"
+        notSoldEntries = self.select("txHash", NFT_STATUS_TABLE, where)
+        if notSoldEntries:
+            return False
+        return True
         
+
+
+    def txHashesToIgnore(self):
         pass
+        DB_STATUS_MUTEX.acquire()
+        try:
+            # get all nfts that don't have the available status
+            where = "status!='" + STATUS_AVAILABLE + "'"
+            txHashes = self.select("txHash", NFT_STATUS_TABLE, where)
+            if txHashes:
+                return txHashes
+            return None
+        finally:
+            DB_STATUS_MUTEX.release()
+
+
+    def customer_found(self, address:str=None, txId:str=None, txHash:str=None):
+        if address == None or txId == None or txHash == None:
+            raise Exception("customer found requires an address, txId and txHash")
+        # mutex to protect against same nft being assigned to multiple customers
+        DB_STATUS_MUTEX.acquire()
+        try:
+            # ensure txHash is not in db to avoid duplicate mints
+            # get hexId of next available....
+            hexId = None # TODO
+            # get hex id
+            where = "status='" + STATUS_AVAILABLE + "'"
+            allAvailable = self.select("hexId", NFT_STATUS_TABLE, where)
+            if allAvailable :
+                hexId = allAvailable[0][0] # first available, inside tuple
+            if hexId == None:
+                return None
+            # add time, status and price to status table, then update
+            current_time = datetime.datetime.utcnow().isoformat()
+            updates = "date='" + current_time + "', "
+            updates += "status='" + STATUS_AWAITING_MINT + "', "
+            updates += "customerAddr='" + address + "', "
+            updates += "txId='" + txId + "', "
+            updates += "txHash='" + txHash + "', "
+            where = "hexId='" + hexId + "'"
+            self.update(NFT_STATUS_TABLE, updates, where)
+        finally:
+            DB_STATUS_MUTEX.release()
+
+        return hexId # TODO not needed as minting thread will handle this
 
 """
 if __name__ == "__main__":

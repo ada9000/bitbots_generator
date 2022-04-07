@@ -173,7 +173,7 @@ class ApiManager:
                         log_error("Something wrong with customer addr finding in customer job")
                         time.sleep(10)
                 # update customers in database to include new customer, set status to awaiting mint
-                self.db.customer_found(address=customer_addr, txId=txId, txHash=txHash)
+                self.db.add_customer(address=customer_addr, txId=txId, txHash=txHash)
             sold_out = self.db.sold_out()
 
 
