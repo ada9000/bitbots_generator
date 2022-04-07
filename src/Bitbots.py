@@ -10,7 +10,7 @@ import random
 import re
 import sys
 import shutil
-from DbComms import DbComms
+from DbComms import NFT_STATUS_TABLE, DbComms
 # local files
 from Nft import *
 from Utility import *
@@ -86,7 +86,7 @@ class Bitbots:
             os.mkdir(self.project_dir)
 
         # db
-        self.db = DbComms(dbName=project, maxMint=self.max_mint)
+        self.db = DbComms(dbName=project, maxMint=self.max_mint) # TODO PASS IN PRICE
         # define files
         self.traits_meta_file       = self.project_dir + "_nft-trait-meta.json"
         self.attributes_meta_file   = self.project_dir + "_nft-attributes-meta.json"
@@ -655,7 +655,7 @@ class Bitbots:
             # update the database to include the nft details (could be more efficient, not required though)
             self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path)
             # nft created
-            self.db.select("*","status","hexId='"+nft_idx+"'")
+            self.db.select("*", NFT_STATUS_TABLE ,"hexId='"+nft_idx+"'")
             log_info("Created " + nft_name)
             mint_idx += 1
         log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
