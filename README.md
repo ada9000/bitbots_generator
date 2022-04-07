@@ -17,6 +17,15 @@
 [] Api call to get all payload data...
 [] Api call to get all meta (could only do 721 to save data)
 
+[] Graceful stop method, finishes all tasks then returns
+
+[] Test multiple async buys
+    [] 10 wallets buy every 20 seconds
+    [] each wallet reports it's last action
+    [] check wallet action against db to confirm success
+[] Test killing app half way through
+[] Add logs to db for minting
+
 
 # Setup sql
 Setup mysql
