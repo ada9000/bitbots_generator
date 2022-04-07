@@ -5,6 +5,8 @@
 [x] Use a database to store state
 [x] Working minting function
 
+[] Change all python files to use there own logger with it's own file? and check it works, remove ascii colours as it's too noisy
+
 [] Api interfaces with mint
     [] User requests buy, api returns addr, PRICE + random dust.
         [] DB updates status of next 'available' status to 'reserved'
@@ -75,3 +77,6 @@ Start api
 - Ensure policy matched when testing likely issue is API project name is different to that in tests
 - Add a test page for meta v2 testing
 - Catch api errors - to test run with unknown policy
+
+### version
+- Python 3.8.10
