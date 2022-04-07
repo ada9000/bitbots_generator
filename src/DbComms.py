@@ -293,7 +293,7 @@ class DbComms:
             DB_STATUS_MUTEX.release()
 
 
-    def customer_found(self, address:str=None, txId:str=None, txHash:str=None):
+    def add_customer(self, address:str=None, txId:str=None, txHash:str=None):
         if address == None or txId == None or txHash == None:
             raise Exception("customer found requires an address, txId and txHash")
         # mutex to protect against same nft being assigned to multiple customers
