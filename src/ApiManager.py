@@ -1,3 +1,4 @@
+from DbComms import STATUS_IN_PROGRESS, STATUS_SOLD
 from Utility import *
 from Wallet import *
 from CardanoComms import *
@@ -31,18 +32,21 @@ class ApiManager:
         self.network = network
         self.wallet = mint_wallet
         self.bf_api = BlockFrostTools(network)
-        self.price  = ada_to_lace(nft_price_ada)
+        self.lace_mint_price  = ada_to_lace(nft_price_ada)
         self.search_mutex = Lock()
         self.mint_mutex = Lock()
 
         # TODO note we might want to check bb first???
-        self.bb = Bitbots(max_mint=max_mint, project=project, adaPrice=nft_price_ada)
+        if self.cc.policy_id == None:
+            raise Exception("Policy issue")# TODO maybe add policy to db?
+        self.bb = Bitbots(max_mint=max_mint, project=project, adaPrice=nft_price_ada, policy=self.cc.policy_id)
 
+        self.bb.generate() # TODO protect this to avoid overrighting
         # queue TODO
         self.db = DbComms(dbName=project, maxMint=max_mint, adaPrice=nft_price_ada)
 
 
-
+    """
     def run(self):
         # add process for minting 
         #   - shall go through reserved list and mint said nft
@@ -143,6 +147,16 @@ class ApiManager:
         # look for ada
         # if exact price is found update that table in db and add the customer address, also set status to awaiting mint
         pass
+    """
+
+    def run(self):
+        customer_job_t = Thread(target=self.customer_job, args=())
+        mint_job_t = Thread(target=self.mint_job, args=())
+        log_info("Starting customer job thread")
+        customer_job_t.start()
+        log_info("Starting mint job thread")
+        mint_job_t.start()
+
 
     def customer_job(self):
         """ 
@@ -155,25 +169,33 @@ class ApiManager:
         # while not all sold
         sold_out = self.db.sold_out()
         while not sold_out:
-            txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.price)
+            log_debug("Customer job looping start")
+            logging.debug("Curstomer job waiting for \'" + str(lace_to_ada(self.lace_mint_price)) + "\' ada in \'" + self.wallet.addr + "\'")
+            txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.lace_mint_price)
             while not txHashIdList:
                 time.sleep(20)
-                txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.price)
+                txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.lace_mint_price)
+
+            # subtract txs that are already in use (conncurrent)
+            txsToIgnore = self.db.txHashesToIgnore()
 
             for txHash, txId in txHashIdList:
-                # get customer TODO this shouldn't need to be in a while... the api call needs a refactor too
-                customer_addr = None
-                while not customer_addr:
-                    customer_addr = self.bf_api.find_sender(
-                        txhash=txHash, 
-                        recv_addr=self.wallet.addr, 
-                        lace=self.price)
+                # ignore any txs that do not have the available status
+                if txsToIgnore:
+                    if txHash in txsToIgnore:
+                        break
+                # get customer address using BLOCK FROST
+                customer_addr = self.bf_api.find_sender(
+                    txhash=txHash, 
+                    recv_addr=self.wallet.addr, 
+                    lace=self.lace_mint_price)
                     # wait and retry
-                    if customer_addr is None:
-                        log_error("Something wrong with customer addr finding in customer job")
-                        time.sleep(10)
-                # update customers in database to include new customer, set status to awaiting mint
-                self.db.add_customer(address=customer_addr, txId=txId, txHash=txHash)
+                if customer_addr is None:
+                    log_error("Issue finding customer with txHash \'" + txHash + "\' in customer_job()")
+                else:
+                    # update customers in database to include new customer, set status to awaiting mint
+                    self.db.add_customer(address=customer_addr, txId=txId, txHash=txHash)
+                    log_debug("Customer added with address \'" + customer_addr + "\'")
             sold_out = self.db.sold_out()
 
 
@@ -188,6 +210,33 @@ class ApiManager:
                 mint nft
                 set status to sold
         """
+        sold_out = self.db.sold_out()
+        while not sold_out:
+            log_debug("Mint job looping start")
+            time.sleep(20) # add a timeout
+            mintList = self.db.getAwaitingMint()
+            if mintList:
+                for hexId, customerAddr, nftName, txHash, txId, metaDataPath in mintList:
+                    # set status to in progress and keep attempting mint
+                    self.db.setStatus(hexId, STATUS_IN_PROGRESS)
+                    successfulMint = False
+                    while not successfulMint:
+                        log_debug("mint attempt")
+                        successfulMint = self.cc.mint_nft_using_txhash(
+                            metadata_path=metaDataPath, 
+                            recv_addr=customerAddr, 
+                            mint_wallet=self.wallet,
+                            nft_name=nftName,
+                            tx_hash=txHash, 
+                            tx_id=txId, 
+                            price=self.lace_mint_price
+                        )
+                    # update status to sold
+                    self.db.setStatus(hexId, STATUS_SOLD)
+                    log_debug("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
+            # break loop if sold out
+            sold_out = self.db.sold_out()
+
         # while active
         # check db for status awaiting mint
         # if found start call mint
@@ -243,7 +292,7 @@ class ApiManager:
         return self.wallet.addr
 
     def get_nft_price(self):
-        return lace_to_ada(self.price)
+        return lace_to_ada(self.lace_mint_price)
 
     def meets_addr_rules(self, addr):
         return True
