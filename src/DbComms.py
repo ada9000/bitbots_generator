@@ -18,6 +18,9 @@ STATUS_AWAITING_MINT        = "awaiting-mint"
 STATUS_IN_PROGRESS          = "minting" # this state is required in case of hard failure, in which something may or maynot have minted
 STATUS_SOLD                 = "sold"
 
+# status list to validate correct status is being used
+STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD]
+
 NFT_STATUS_TABLE = "nft_status"
 
 DB_MUTEX = Lock() # TODO REMOVE THIS ONE?
@@ -110,7 +113,7 @@ class DbComms:
         sql = "SELECT " + x + " FROM " + table
         if where != None:
             sql += " WHERE " + where
-        log_error(sql) #TODO remove log
+        #log_error(sql) #TODO remove log
         res = None
         DB_MUTEX.acquire()
         try:
@@ -126,7 +129,7 @@ class DbComms:
 
     def update(self, table, values, where):
         sql = "UPDATE " + table + " SET " + values + " WHERE " + where
-        log_error(sql)
+        #log_error(sql)
         res = None
         DB_MUTEX.acquire()
         try:
@@ -136,8 +139,8 @@ class DbComms:
         finally:
             DB_MUTEX.release()
 
-        for x in res:
-            log_debug(str(x))
+        #for x in res:
+        #    log_debug(str(x))
 
 
     # STATE ------------------------------------------------------------------
@@ -177,7 +180,7 @@ class DbComms:
         other += "metaFilePath VARCHAR(255), "
         other += "svgFilePath VARCHAR(255), "
         other += "price VARCHAR(20), "
-        other += "data VARCHAR(255)"
+        other += "date VARCHAR(255)"
         # TODO DATE
         # TODO session IDENTIFIER
         self.create_table(tableName=tableName, other=other)
@@ -212,7 +215,7 @@ class DbComms:
         where = "hexId='" + hexId + "'"
         self.update(NFT_STATUS_TABLE, updates, where)
     
-    def check_if_customer_session_expired(self):
+    def check_if_customer_session_expired(self): # TODO works with customer reserved
         # return true if expired
         # get date
         time_in_db = None # get this from db
@@ -256,7 +259,7 @@ class DbComms:
             price = str(price)
             # add time, status and price to status table, then update
             current_time = datetime.datetime.utcnow().isoformat()
-            updates = "data='" + current_time + "', "
+            updates = "date='" + current_time + "', "
             updates += "status='" + STATUS_AWAITING_PAYMANET + "', "
             updates += "price='" + price + "' "
             where = "hexId='" + hexId + "'"
@@ -286,11 +289,55 @@ class DbComms:
             # get all nfts that don't have the available status
             where = "status!='" + STATUS_AVAILABLE + "'"
             txHashes = self.select("txHash", NFT_STATUS_TABLE, where)
+            txHashes = [i[0] for i in txHashes]
             if txHashes:
                 return txHashes
             return None
         finally:
             DB_STATUS_MUTEX.release()
+    
+    # get all nfts that have a customer assigned
+    # TODO no checks to check if addr is valid
+    def getAwaitingMint(self):
+        pass
+        DB_STATUS_MUTEX.acquire()
+        try:
+            # get all nfts 
+            where = "status='" + STATUS_AWAITING_MINT + "'"
+            awaitingMint = self.select("hexId, customerAddr, nftName, txHash, txId, metaFilePath", NFT_STATUS_TABLE, where)
+            if awaitingMint:
+                return awaitingMint
+            return None
+        finally:
+            DB_STATUS_MUTEX.release()
+
+    # TODO only used to mint from failure
+    def getAllInProgress(self):
+        pass
+        DB_STATUS_MUTEX.acquire()
+        try:
+            # get all nfts 
+            where = "status='" + STATUS_IN_PROGRESS + "'"
+            awaitingMint = self.select("hexId, customerAddr, nftName, txHash, txId, metaFilePath", NFT_STATUS_TABLE, where)
+            if awaitingMint:
+                return awaitingMint
+            return None
+        finally:
+            DB_STATUS_MUTEX.release()
+
+
+    def setStatus(self, hexId, status):
+        DB_STATUS_MUTEX.acquire()
+        if status not in STATUS_LIST:
+            raise Exception("invalid status \'" + status + "\'")
+            
+        try:
+            update = "status='" + status + "' "
+            where = "hexId='" + hexId + "'"
+            self.update(NFT_STATUS_TABLE, update, where)
+        finally:
+            DB_STATUS_MUTEX.release()
+
 
 
     def add_customer(self, address:str=None, txId:str=None, txHash:str=None):
@@ -315,7 +362,7 @@ class DbComms:
             updates += "status='" + STATUS_AWAITING_MINT + "', "
             updates += "customerAddr='" + address + "', "
             updates += "txId='" + txId + "', "
-            updates += "txHash='" + txHash + "', "
+            updates += "txHash='" + txHash + "' "
             where = "hexId='" + hexId + "'"
             self.update(NFT_STATUS_TABLE, updates, where)
         finally:
