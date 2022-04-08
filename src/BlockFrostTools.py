@@ -43,7 +43,7 @@ class BlockFrostTools:
         
         # TODO what if multiple outputs i.e more than 2?
         for x in res.outputs:
-            log_debug(x.address)
+            #logging.info(x.address)
             if x.address != recv_addr:
                 return x.address
         return None
