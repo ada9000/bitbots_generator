@@ -55,7 +55,7 @@ class Bitbots:
         # check args
         if project == None:
             raise Exception("No project defined")
-        if project == None:
+        if policy == None:
             raise Exception("No policy defined")
         
         # parameters
@@ -101,11 +101,11 @@ class Bitbots:
         if not os.path.isdir(self.nft_svg_dir):
             os.mkdir(self.nft_svg_dir)
         
-        self.generate()
+        #self.generate()
 
-        print("about to clean type continue ")
-        breakpoint() # TODO testing only
-        self.clean() # TODO testing only
+        #print("about to clean type continue ")
+        #breakpoint() # TODO testing only
+        #self.clean() # TODO testing only
 
     def generate(self):
         # check to see if project exists TODO
