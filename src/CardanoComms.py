@@ -64,7 +64,9 @@ class CardanoComms:
     def use_existing_policy(self):
         log_info("using existing policy")
         if not os.path.isfile(self.policy_id_path):
-            raise Exception("No policy-id json at " + str(self.policy_id_path))
+            self.gen_policy()
+            log_error("No policy-id json at " + str(self.policy_id_path))
+            #raise Exception("No policy-id json at " + str(self.policy_id_path))
         self.policy_id = read_file_return_data(self.policy_id_path)["id"]
         self.target_slot = read_file_return_data(self.slot_path)["slot"] 
 
@@ -256,10 +258,14 @@ class CardanoComms:
         return
 
 
-    def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, tx_hash, tx_id, price):
+    def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, nft_name, tx_hash, tx_id, price):
+        # convert utf-8, nft name to base16
+        nft_name = nft_name.encode("utf-8")
+        nft_name = base64.b16encode(nft_name)
+        nft_name = replace_b_str(nft_name)
         # read meta and 'fix' (insert policy id into it)
-        metadata = read_file_return_data(metadata_path)
-        nft_id = list(metadata['721'][self.policy_id].keys())[0]
+        #metadata = read_file_return_data(metadata_path)
+        #nft_name = list(metadata['721'][self.policy_id].keys())[0]
         # set min mint costs and arbitrary change value
         #log_debug("nft-id: " + nft_id)
         change = 0 # 1.5 ada
@@ -269,7 +275,7 @@ class CardanoComms:
         self.build_mint_tx(fee="0", change=change,
             recv_addr=recv_addr,
             mint_wallet=mint_wallet,
-            nft_id=nft_id,
+            nft_name=nft_name,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path,
             txhash=tx_hash,
@@ -310,7 +316,7 @@ class CardanoComms:
             change=change,
             recv_addr=recv_addr,
             mint_wallet=mint_wallet,
-            nft_id=nft_id,
+            nft_name=nft_name,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path,
             txhash=tx_hash,
@@ -319,7 +325,7 @@ class CardanoComms:
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
         # send
-        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
+        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=nft_name)
 
 
     # TODO DEPRECATE OR IGNORE
@@ -337,7 +343,7 @@ class CardanoComms:
         self.build_mint_tx(fee="0", change=change,
             recv_addr=recv_addr,
             mint_wallet=mint_wallet,
-            nft_id=nft_id,
+            nft_name=nft_id,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path)
         witness = "1"
@@ -373,26 +379,23 @@ class CardanoComms:
             change=change,
             recv_addr=recv_addr,
             mint_wallet=mint_wallet,
-            nft_id=nft_id,
+            nft_name=nft_id,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path)
         #sign
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
         # send
-        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nft_id=nft_id)
+        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=nft_id)
 
 
-    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_id, min_mint_cost, metadata_path, txhash=None, txid=None):
+    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_name, min_mint_cost, metadata_path, txhash=None, txid=None):
         """ builds a nft transaction """
-        # set 
-        nft_id = nft_id.encode("utf-8")
-        nft_id = base64.b16encode(nft_id)
-        nft_id = replace_b_str(nft_id)
+        # set  TODO TODO TODO TODO ere
 
         # build nft mint str (assume amount to be 1)        
         nft_mint_str = "\""
-        nft_mint_str = nft_mint_str + "1" + " " + self.policy_id + "." + nft_id
+        nft_mint_str = nft_mint_str + "1" + " " + self.policy_id + "." + nft_name
         nft_mint_str = nft_mint_str + " \""
         # convert ints to strings
         fee = str(fee)
@@ -408,9 +411,9 @@ class CardanoComms:
                 tx_in += " --tx-in " + tx_id + "#" + tx_hash
                 # TODO DO NOT USE ALL TXS, ONLY CONSUME SENDERS TX
         if tx_hash != None:
-            log_debug("spending tx from sender")
+            #log_debug("spending tx from sender")
             tx_in = " --tx-in " + str(txhash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
-            log_error(tx_in)
+            #log_error(tx_in)
 
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + change
@@ -454,7 +457,7 @@ class CardanoComms:
         return True
 
 
-    def submit_mint_tx(self, recv_addr:str, wallet:Wallet, nft_id:str):
+    def submit_mint_tx(self, recv_addr:str, wallet:Wallet, nftName:str):
         cmd = "cardano-cli transaction submit"+\
             " --tx-file " + wallet.tx_signed + " " + self.network
         res = cmd_out(cmd)
