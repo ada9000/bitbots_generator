@@ -88,7 +88,14 @@ class BlockFrostTools:
                 # get json specific json/dict keys
                 json_tag = 'json_metadata'
                 label = meta[i]['label']
-                policy_id =  list(meta[i][json_tag])[0]
+                
+                # ignore version tag # TODO in the future we might need to check for policy id regex
+                policy_id = None
+                for loc, data in enumerate(meta[i][json_tag].keys()):
+                    if data != 'version':
+                        policy_id =  list(meta[i][json_tag])[loc]
+                
+
                 mint_id =  list(meta[i][json_tag][policy_id])[0]
                 # each metadata type to it's own dict (optionally we could put it all in one json) 
                 if label == "721":
