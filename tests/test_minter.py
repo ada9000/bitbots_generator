@@ -5,7 +5,7 @@ from ApiManager import *
 
 PRICE=5
 NEW_POLICY=False
-PROJECT = "TEST3"
+PROJECT = "TESTSS"
 MAX_MINT=10
 
 mint_wallet = Wallet()

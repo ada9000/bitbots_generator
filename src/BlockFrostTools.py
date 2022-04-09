@@ -13,7 +13,7 @@ class BlockFrostTools:
         # get api key from .env
         load_dotenv()
         self.api_key = os.getenv('BLOCK_FROST_API_KEY')
-        if self.api_key is None:
+        if self.api_key == None:
             raise Exception("No blockfrost api key. Update .env")
         # init api
         self.api = BlockFrostApi(
@@ -43,7 +43,7 @@ class BlockFrostTools:
         
         # TODO what if multiple outputs i.e more than 2?
         for x in res.outputs:
-            log_debug(x.address)
+            #logging.info(x.address)
             if x.address != recv_addr:
                 return x.address
         return None
