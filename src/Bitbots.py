@@ -551,6 +551,12 @@ class Bitbots:
 
 
     def create_new_set(self):
+
+        # check db first
+        if self.db.getAllGenerated():
+            log_info("All generated, not creating new set")
+            return
+
         # minting vars TODO put inside local function
         mint_idx = 0
         current_payload_idx = 0
@@ -664,4 +670,5 @@ class Bitbots:
         log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
 
         # return the nft idx of the last nft with a payload
+        self.db.setAllGenerated()
         return last_nft_with_payload 
