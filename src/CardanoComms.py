@@ -296,7 +296,7 @@ class CardanoComms:
         funds = price # TODO funds are the price of tx
         # calculate change
         change = int(funds) - int(fee) - int(min_mint_cost)
-        if change < 1:
+        if change < 2:
             log_error("Invalid change \'" + str(lace_to_ada(change)) + "\' ada")
         #log_debug("fee      : " +str(fee))
         #log_debug("min-mint : " + str(min_mint_cost))
@@ -434,7 +434,7 @@ class CardanoComms:
         # run build tx cmd
         res = cmd_out(build_raw)
         if str(res) == EMPTY_BYTE_STRING:
-            log_info("build tx success for \'" + nft_mint_str + "\'")
+            log_info("build tx success for " + nft_mint_str)
         else:
             res = replace_b_str(res)
             log_error(str(res))
@@ -463,15 +463,17 @@ class CardanoComms:
         res = cmd_out(cmd)
         res = replace_b_str(res)
         res = res.replace('\n','')
-        log_info(res)
         if 'BadImputsUTxO' in res:
             log_error("BadImputsUTxO")
             return False
         if 'ValueNotConservedUTxO' in res:
             log_error("ValueNotConservedUTxO")
             return False
+        if 'OutputTooSmallUTxO' in res:
+            log_error("OutputTooSmallUTxO - Ensure price is greater than ~5 ADA")
+            return False
         if 'Error' in res:
             log_error("something went wrong (socket?)")
             return False
-
+        log_debug("Submitted to Cardano blockchain successfully")
         return True
