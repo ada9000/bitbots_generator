@@ -222,7 +222,7 @@ class DbComms:
         time_reserved = datetime.datetime.fromisoformat(time_in_db)
         pass
 
-    def customer_reserved(self):
+    def customer_reserved(self): # TODO might be deprecated?
         DB_STATUS_MUTEX.acquire()
         try:
             # returns price if available else None
