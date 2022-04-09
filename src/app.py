@@ -23,7 +23,7 @@ t = BlockFrostTools()
 # get all?
 @app.route("/")
 def home():
-    return "Home", 200
+    return jsonify({"status":"alive"})
 
 # TODO incorrect usage here
 @app.route("/nft_count")

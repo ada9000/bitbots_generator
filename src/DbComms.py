@@ -3,9 +3,10 @@ from dotenv import load_dotenv
 import os
 import datetime
 import random
-
+import json
+import base64
 from mysqlx import Column
-from Utility import ada_to_lace, int_to_hex_id, lace_to_ada, log_debug, log_error
+from Utility import ada_to_lace, int_to_hex_id, lace_to_ada, log_debug, log_error, read_file_return_data
 import mysql.connector
 from threading import Lock
 
@@ -180,6 +181,8 @@ class DbComms:
         other += "metaFilePath VARCHAR(255), "
         other += "svgFilePath VARCHAR(255), "
         other += "price VARCHAR(20), "
+        other += "meta BLOB, "
+        other += "svg MEDIUMBLOB, "
         other += "date VARCHAR(255)"
         # TODO DATE
         # TODO session IDENTIFIER
@@ -214,7 +217,55 @@ class DbComms:
         updates += "svgFilePath='" + svgFilePath + "'"
         where = "hexId='" + hexId + "'"
         self.update(NFT_STATUS_TABLE, updates, where)
+
+        # HERE
+        self.updateBlob(hexId, "meta", metaFilePath)
+        self.updateBlob(hexId, "svg", svgFilePath)
     
+    def updateBlob(self, hexId, target, filepath):
+        data = None
+        with open(filepath, 'rb') as f:
+            data = f.read()
+
+        sql = "UPDATE " + NFT_STATUS_TABLE + " SET " + target + " = %s WHERE %s "
+        DB_MUTEX.acquire()
+        try:
+            log_error(sql)
+            self.db_cursor.execute(sql, (data, hexId) )
+            self.conn.commit()
+            res = self.db_cursor.fetchall()
+        finally:
+            DB_MUTEX.release()
+
+    # query for svgs and meta ------------------------------------------------
+    def getSvg(self, hexId):
+        where = "hexId='" + hexId + "'"
+        res = self.select("svg", NFT_STATUS_TABLE, where)
+        return res[0][0].decode('utf-8')
+
+    def getMeta(self, hexId):
+        where = "hexId='" + hexId + "'"
+        res = self.select("meta", NFT_STATUS_TABLE, where)
+        return json.loads(res[0][0])
+
+    def getAllMeta(self):
+        """ return all metadata fro the database """
+        res = self.select("hexId, meta", NFT_STATUS_TABLE)
+        allMeta = {}
+        for hexId, meta in res:
+            allMeta[hexId] = json.loads(meta)
+        return allMeta
+    
+    def getAllSvg(self):
+        """ return all metadata fro the database """
+        res = self.select("hexId, svg", NFT_STATUS_TABLE)
+        allSvg = {}
+        for hexId, svg in res:
+            allSvg[hexId] = svg.decode('utf-8')
+        return allSvg
+
+
+    # customer depreacted maybe ----------------------------------------------
     def check_if_customer_session_expired(self): # TODO works with customer reserved
         # return true if expired
         # get date
