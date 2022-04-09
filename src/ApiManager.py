@@ -280,11 +280,18 @@ class ApiManager:
         return self.bb.get_all_names()
 
     def get_nft_svg(self, nft_id):
-        return self.bb.get_svg(idx=nft_id)
+        return self.db.getSvg(nft_id)
 
     def get_nft_meta(self, nft_id):
-        return self.bb.get_meta(idx=nft_id)
- 
+        return self.db.getMeta(nft_id)
+    
+    def get_all_meta(self):
+        return self.db.getAllMeta()
+
+    def get_all_svg(self):
+        return self.db.getAllSvg()
+
+
     def get_policy(self):
         return self.cc.policy_id
 
