@@ -34,7 +34,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-#INPUT_DIR = "../input-testnet/"
+INPUT_DIR = "../input-testnet/"
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -387,7 +387,7 @@ class Bitbots:
         for row in payload_arr:
             if line_count >= RESET_VALUE:
                 log_debug("Payload for \'" + trait +"\' stored in idx " + str(self.payload_index))
-                self.payload_data[self.payload_index] = tmp_payload
+                self.payload_data[self.payload_index] = tmp_payload # TODO string? THIS NEEDS TO BE STORTED IN CIP
                 used_indices.append(self.payload_index)
                 self.payload_index += 1 # global index for payloads
                 tmp_payload = []
@@ -400,7 +400,7 @@ class Bitbots:
         # append any data left if we didn't finish on a RESET_VALUE
         if tmp_payload != []:
             log_debug("Payload for \'" + trait +"\' stored in idx " + str(self.payload_index))
-            self.payload_data[self.payload_index] = tmp_payload
+            self.payload_data[self.payload_index] = tmp_payload # TODO string? for Json, but looks alright
             used_indices.append(self.payload_index)
             self.payload_index += 1
         # allow the trait value to point to the 'block# indices
@@ -555,33 +555,26 @@ class Bitbots:
         mint_idx = 0
         current_payload_idx = 0
         last_nft_with_payload = None
-        for mint_idx in range(self.max_mint): 
 
-            # check correct
-            if mint_idx >= self.max_mint:
-                if current_payload_idx > len(self.payload_data):
-                    return None
-                else:
-                    self.max_mint += 1
-                    log_error("Max mint increased due to missing data that needs deploying to blockchain")
+        payloadsNeedAdding = True
+        nftsLeftToMint = True
 
+        # loop while there are still payloads to be added or nfts left to mint
+        while payloadsNeedAdding or nftsLeftToMint:
             # check current idx
             n = Nft(self.policy)
-            
-            # use current index
-            self.payload_index
             
             # set index
             nft_idx = int_to_hex_id(mint_idx)
 
             # generate random nft
-            nft = {}
             used_hashes = []
             refs = []
             # run inner loop that picks properties and creates a unique id based on props (hex_hash)
             hex_hash, properties = self.gen_random_props()  
 
             # TODO also check to ensure we don't mint more than allowed of any given trait
+            # write a test but I think the hex hash does this
 
             # check for duplicates, and rerun until our new hex has is unique
             for h in used_hashes:
@@ -591,14 +584,11 @@ class Bitbots:
             nft_name = 'Bitbot 0x' + nft_idx
 
             refs = self.find_refs_for_props(properties, nft_idx)
-            # save nft with padded number i.e 0001,...,1111,...,n
-            nft = {"meta":properties, "hex":hex_hash, "refs":refs}
-
 
             # payload
             nft_payload = None
-
             # TODO check if NFT should have property for holding data here?
+            # get the next payload found using the payload index,
             if current_payload_idx < len(self.payload_data):
                 try:
                     nft_payload = self.payload_data[current_payload_idx]
@@ -606,7 +596,7 @@ class Bitbots:
                     nft_payload = self.payload_data[str(current_payload_idx)]
                 last_nft_with_payload = mint_idx
 
-            # nft meta
+            # create the nft meta with the payload index
             nft_meta = n.generate_nft(nft_name=nft_name, payload_ref=current_payload_idx, nft_payload=nft_payload, nft_references=refs, properties=properties)
             current_payload_idx += 1 #TODO fit more payload into one nft
 
@@ -637,26 +627,41 @@ class Bitbots:
                         current_payload_idx += 1
                         last_nft_with_payload = mint_idx
                         nft_meta = nft_meta_tmp
-                    # too large exit without saving new changes
                     else:
+                        # too large exit without saving new changes
                         valid_size = False
                     # remove tmp file
                     os.remove(f)
+
             # write meta json ----------------------------------------------------
             meta_file_path = self.nft_meta_dir + nft_idx + ".json"
             write_json(meta_file_path ,nft_meta)
+
             # write svg ----------------------------------------------------------
             svg_file_path = self.nft_svg_dir + nft_idx + ".svg"
             self.nft_to_svg(path=svg_file_path, refs=refs)
+
             # check file size
             s = os.path.getsize(meta_file_path)
             if s > MAX_PAYLOAD_BYTES:
                 raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
+
             # update the database to include the nft details (could be more efficient, not required though)
             self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path)
+            
             # nft created
             self.db.select("*", NFT_STATUS_TABLE ,"hexId='"+nft_idx+"'")
             log_info("Created " + nft_name)
             mint_idx += 1
+
+            # if there are still nfts to be minted keep looping
+            if mint_idx > self.max_mint:
+                nftsLeftToMint = False
+            # if there are still payloads to be added keep looping
+            if current_payload_idx > len(self.payload_data) - 1:
+                payloadsNeedAdding = False
+
         log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
-        log_error("don't forget to generate policy first") # TODO REMOVE this comment
+
+        # return the nft idx of the last nft with a payload
+        return last_nft_with_payload 
