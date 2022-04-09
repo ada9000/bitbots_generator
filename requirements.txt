@@ -1,0 +1,9 @@
+python-dotenv==0.19.2
+python-dateutil==2.8.2
+pandas==1.4.1
+numpy==1.22.3
+mysql-connector-python==8.0.28
+Jinja2==3.1.1
+Flask==2.0.3
+Flask-Cors==3.0.10
+blockfrost-python==0.4.3

@@ -23,6 +23,24 @@ COLOR_CYAN = '\033[0;36m'
 COLOR_YELLOW = '\033[1;33m'
 COLOR_RED = '\033[1;31m'
 
+# make missing dirs -----------------------------------------------------------
+if not os.path.isdir(FILES_DIR):
+    os.mkdir(FILES_DIR)
+if not os.path.isdir(PROJECT_DIR):
+    os.mkdir(PROJECT_DIR)
+if not os.path.isdir(WALLET_DIR):
+    os.mkdir(WALLET_DIR)
+
+# setup logggin ---------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(PROJECT_DIR + "debug.log"),
+        logging.StreamHandler()
+    ]
+)
+
 # logging --------------------------------------------------------------------
 def log_debug(msg:str):
     msg = " " + COLOR_YELLOW + msg + COLOR_RESET
@@ -95,3 +113,7 @@ def ada_to_lace(x:float):
 
 def lace_to_ada(x:float):
     return x / 1000000
+
+# MISC -----------------------------------------------------------------------
+def int_to_hex_id(x:int):
+    return hex(x)[2:].zfill(4).upper()
