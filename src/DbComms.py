@@ -23,6 +23,7 @@ STATUS_SOLD                 = "sold"
 STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD]
 
 NFT_STATUS_TABLE = "nft_status"
+NFT_STATE_TABLE = "state"
 
 DB_MUTEX = Lock() # TODO REMOVE THIS ONE?
 DB_STATUS_MUTEX = Lock()
@@ -62,10 +63,11 @@ class DbComms:
 
 
     def setupTables(self):
-        self.create_state_table()
-        self.populate_state()
-        self.create_status_table()
-        self.populate_status()
+        if self.create_state_table():
+            print("populate table!")
+            self.populate_state()
+        if self.create_status_table():
+            self.populate_status()
 
     
     # FUNCTIONALITY ----------------------------------------------------------
@@ -91,9 +93,11 @@ class DbComms:
         except mysql.connector.Error as err:
             if err.errno == 1050:
                 log_debug(str("table \'" + tableName + "\' exists"))
+                return False
             else:
                 raise err
         log_debug(str("table \'" + tableName + "\' created"))
+        return True
 
     def show_tables(self):
         self.db_cursor.execute("SHOW TABLES")
@@ -146,18 +150,17 @@ class DbComms:
 
     # STATE ------------------------------------------------------------------
     def create_state_table(self):
-        tableName = "state"
         other =  "project VARCHAR(255) PRIMARY KEY, "
         other += "nftIndex VARCHAR(10), "
         other += "price VARCHAR(10), "
         other += "maxNFTS INT, "
+        other += "allGenerated VARCHAR(5), "
         other += "nftBearingLastPayload VARCHAR(10)"
-        self.create_table(tableName=tableName, other=other)
+        return self.create_table(tableName=NFT_STATE_TABLE, other=other)
 
-    def populate_state(self): # TODO STATE MIGHT BE DEPRECATED?
-        values = []
-        sql = "INSERT INTO state (project, nftIndex) VALUES (%s, %s)"
-        val = (self.dbName, int_to_hex_id(0))
+    def populate_state(self):
+        sql = "INSERT INTO "+ NFT_STATE_TABLE +" (project, nftIndex, allGenerated) VALUES (%s, %s, %s)"
+        val = (self.dbName, int_to_hex_id(0), 'false')
         try:
             self.db_cursor.execute(sql, val)
             self.conn.commit()
@@ -166,7 +169,18 @@ class DbComms:
                 log_debug("duplicate")
             else:
                 raise err
+        
+    def setAllGenerated(self):
+        updates = "allGenerated='true' "
+        where = "project='" + self.dbName + "'"
+        self.update(NFT_STATE_TABLE, updates, where)
 
+    def getAllGenerated(self,):
+        where = "project='" + self.dbName + "'"
+        res = self.select("allGenerated", NFT_STATE_TABLE, where)
+        if res[0][0] == 'true':
+            return True
+        return False
 
     # STATUS -----------------------------------------------------------------
     def create_status_table(self):
@@ -184,9 +198,7 @@ class DbComms:
         other += "meta BLOB, "
         other += "svg MEDIUMBLOB, "
         other += "date VARCHAR(255)"
-        # TODO DATE
-        # TODO session IDENTIFIER
-        self.create_table(tableName=tableName, other=other)
+        return self.create_table(tableName=tableName, other=other)
     
     def populate_status(self):
         # no need for mutex here as it's ran before any concurrent code
@@ -227,10 +239,9 @@ class DbComms:
         with open(filepath, 'rb') as f:
             data = f.read()
 
-        sql = "UPDATE " + NFT_STATUS_TABLE + " SET " + target + " = %s WHERE %s "
+        sql = "UPDATE " + NFT_STATUS_TABLE + " SET " + target + " = %s WHERE hexId = %s "
         DB_MUTEX.acquire()
         try:
-            log_error(sql)
             self.db_cursor.execute(sql, (data, hexId) )
             self.conn.commit()
             res = self.db_cursor.fetchall()
