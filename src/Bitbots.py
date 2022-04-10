@@ -34,7 +34,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-INPUT_DIR = "../input-testnet/"
+#INPUT_DIR = "../input-testnet/"
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -64,7 +64,7 @@ class Bitbots:
         self.policy = policy
         # vars
         self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
-        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b","#ebda46", "#ffc44b","#ffd700","#696969","#ffffff"]
+        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
         self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # meta data       
@@ -108,7 +108,12 @@ class Bitbots:
         #self.clean() # TODO testing only
 
     def generate(self):
-        # check to see if project exists TODO
+        # check to see if project exists
+        if self.db.getAllGenerated():
+            # exists return do not generate new set
+            log_info("All generated, not creating new set")
+            return
+
         # clean and get data from files
         self.nft_meta_from_files()
         # update and apply weights
@@ -551,12 +556,6 @@ class Bitbots:
 
 
     def create_new_set(self):
-
-        # check db first
-        if self.db.getAllGenerated():
-            log_info("All generated, not creating new set")
-            return
-
         # minting vars TODO put inside local function
         mint_idx = 0
         current_payload_idx = 0
@@ -653,7 +652,7 @@ class Bitbots:
                 raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
 
             # update the database to include the nft details (could be more efficient, not required though)
-            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path)
+            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path, hasPayload=nft_payload)
             
             # nft created
             self.db.select("*", NFT_STATUS_TABLE ,"hexId='"+nft_idx+"'")
