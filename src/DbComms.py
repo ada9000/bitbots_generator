@@ -181,12 +181,13 @@ class DbComms:
         if res[0][0] == 'true':
             return True
         return False
-
+    
     # STATUS -----------------------------------------------------------------
     def create_status_table(self):
         # no need for mutex here as it's ran before any concurrent code
         tableName = NFT_STATUS_TABLE
         other =  "hexId VARCHAR(4) PRIMARY KEY, "
+        other += "intId INT, "
         other += "status VARCHAR(255), "
         other += "txHash VARCHAR(100), "
         other += "txId VARCHAR(100), "
@@ -195,6 +196,7 @@ class DbComms:
         other += "metaFilePath VARCHAR(255), "
         other += "svgFilePath VARCHAR(255), "
         other += "price VARCHAR(20), "
+        other += "hasPayload VARCHAR(20), "
         other += "meta BLOB, "
         other += "svg MEDIUMBLOB, "
         other += "date VARCHAR(255)"
@@ -204,10 +206,11 @@ class DbComms:
         # no need for mutex here as it's ran before any concurrent code
         values = []
         sql = "INSERT INTO " + NFT_STATUS_TABLE
-        sql += " (hexId, status, price) VALUES (%s, %s, %s)" 
+        sql += " (hexId, intId, status, price) VALUES (%s, %s, %s, %s)" 
         for i in range(self.maxMint):
             values.append((
                 int_to_hex_id(i),
+                int(i),
                 STATUS_AVAILABLE,
                 self.adaPrice
             ))
@@ -221,12 +224,56 @@ class DbComms:
                 raise err
 
         log_debug(str(self.db_cursor.rowcount) + " inserted")
+    
+    def getNftPagination(self, index):
+        where = "intId >= " + str(index) + " LIMIT 32"
+        res = self.select("hexId, intId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE, where)
+        paginationJson = {}
+
+        for hexId, intId, nftName, status, hasPayload, meta in res:
+            meta = json.loads(meta) # TODO convert to null if status 
+            paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+
+        return paginationJson
+
+    def getNft(self, nft_id):
+        hexId, nftName, status, hasPayload, meta = self.select("hexId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE)[0]
+        intId = int(hexId, 16)
+        meta = json.loads(meta)
+        details = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+        # TODO don't return meta if not avilable!!
+        return {intId: details}
+    
+    """
+    def getNft(self, nft_id):
+        hexId, nftName, status, hasPayload, meta = self.select("hexId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE)[0]
+        intId = int(hexId, 16)
+        meta = json.loads(meta)
+        details = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+        # TODO don't return meta if not avilable!!
+        return {intId: details}
+    """
+    
+    def getNftStatus(self,):
+        res = self.select("hexId, status, hasPayload", NFT_STATUS_TABLE)
+        nftStatusJson = {}
+        for hexId, status, hasPayload in res:
+            intId = int(hexId, 16)
+            nftStatusJson[intId] = {"hexId":hexId, "status":status, "hasPayload":hasPayload}
+
+        return nftStatusJson
 
     #d.update("status", "status='cake'", "hexId='0000'")
-    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath):
+    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath, hasPayload):
         updates = "nftName='" + nftName + "', "
+        if hasPayload != None:
+            updates += "hasPayload='true', "
+        else:
+            updates += "hasPayload='false', "
+
         updates += "metaFilePath='" + metaFilePath + "', "
         updates += "svgFilePath='" + svgFilePath + "'"
+
         where = "hexId='" + hexId + "'"
         self.update(NFT_STATUS_TABLE, updates, where)
 

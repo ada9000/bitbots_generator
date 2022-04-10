@@ -276,6 +276,12 @@ class ApiManager:
             # return buy addr and the price  
         return None
 
+    def nftPagination(self, index):
+        return self.db.getNftPagination(index=index)
+
+    def getNft(self, nft_id):
+        return self.db.getNft(nft_id)
+
     def get_names(self):
         return self.bb.get_all_names()
 
@@ -291,6 +297,8 @@ class ApiManager:
     def get_all_svg(self):
         return self.db.getAllSvg()
 
+    def getNftStatus(self):
+        return self.db.getNftStatus()
 
     def get_policy(self):
         return self.cc.policy_id
