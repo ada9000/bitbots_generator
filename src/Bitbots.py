@@ -75,7 +75,7 @@ class Bitbots:
         self.variable_attributes = ["bg_effects", "colour","bg_colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
-        self.bg_colours = ["#555555","#f5a3a3","#f5bea3", "#f5daa3", "#f5f5a3", "#daf5a3","#bef5a3","#a3f5a3","#a3f5be","#a3f5da","#a3f5f5","#a3daf5","#a3bef5","#a3a3f5","#bea3f5","#daa3f5","#f5a3f5","#f5a3da","#f5a3be"]
+        self.bg_colours = ["#393939","#f5a3a3","#f5bea3", "#f5daa3", "#f5f5a3", "#daf5a3","#bef5a3","#a3f5a3","#a3f5be","#a3f5da","#a3f5f5","#a3daf5","#a3bef5","#a3a3f5","#bea3f5","#daa3f5","#f5a3f5","#f5a3da","#f5a3be"]
 
         self.ref_order = ['startcolour','colour', 'bg_colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # meta data       
