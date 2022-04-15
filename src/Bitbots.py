@@ -28,6 +28,15 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
+
+# BG _ COLOUR 
+BG_BASE_COLOUR = 'style="fill:rgb(255,0,99);"'
+BG_BASE_COLOUR_REPLACE = 'class="bg_colour"'
+BG_COLOUR_STYLE_START = '<style> .bg_colour {fill:'
+BG_COLOR_STYLE_DEFAULT = '{fill: #FF0063}' # TODO deprecated?
+BG_COLOUR_STYLE_END = '} </style>'
+
+
 #-----------------------------------------------------------------------------
 DEFAULT_WEIGHT = 1.0
 MINT_MAX = 8192
@@ -63,10 +72,12 @@ class Bitbots:
         self.max_payload_bytes = max_payload_bytes
         self.policy = policy
         # vars
-        self.variable_attributes = ["bg_effects", "colour", "special", "hats", "ears", "mouths", "eyes"]
+        self.variable_attributes = ["bg_effects", "colour","bg_colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
-        self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
+        self.bg_colours = ["#ff9999", "#ffbb99", "#ffdd99", "#ffff99", "#ddff99", "#bbff99", "#99ff99", "#99ffbb", "#99ffdd", "#99ffff", "#99ddff", "#99bbff", "#9999ff", "#bb99ff", "#dd99ff", "#ff99ff", "#ff99dd", "#ff99bb" ]
+
+        self.ref_order = ['startcolour','colour', 'bg_colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # meta data       
         self.nft_traits = {}        # json defining each trait #TODO note this also includes count
         self.nft_attributes = {}    # json defining all attributes
@@ -180,6 +191,17 @@ class Bitbots:
             id_num += 1
         # add colours to the nft attributes
         self.nft_attributes['colour'] = self.colours
+
+        # add bg colours
+        id_num = 0
+        for trait in self.bg_colours:
+            self.nft_traits[trait] = self.nft_meta_inner('bg_colour', id_num, trait)
+            id_num += 1
+        # add colours to the nft attributes
+        self.nft_attributes['bg_colour'] = self.bg_colours
+
+
+
         # save to file 
         write_json(self.traits_meta_file, self.nft_traits)
         write_json(self.attributes_meta_file, self.nft_attributes)
@@ -221,6 +243,7 @@ class Bitbots:
         svg_str = svg_str.replace('\n', '')
         # replace svg base colours with dynamic method
         svg_str = svg_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
+        svg_str = svg_str.replace(BG_BASE_COLOUR, BG_BASE_COLOUR_REPLACE)
         # set data to the new refactored data
         return svg_str 
 
@@ -284,6 +307,8 @@ class Bitbots:
         #self.payload_meta[trait] = used_indices
         refs += self.find_payload_refs('startcolour')
         refs += self.find_payload_refs(properties['colour'])
+        refs += self.find_payload_refs('colour_seperator')
+        refs += self.find_payload_refs(properties['bg_colour'])
         refs += self.find_payload_refs('endcolour')
         
         # backgrounds
@@ -431,16 +456,29 @@ class Bitbots:
         # SVG start until color
         payload_str = ""
         payload_str += SVG_start
-        payload_str += COLOUR_STYLE_START 
+        
+        # COLOURS
+        payload_str += '<style> .base_colour {fill:'
         # add start
         self.append_to_payload(payload_str, 'startcolour')
-        # add color
+        # add base colour
         for c in self.nft_attributes["colour"]:
             payload_str = c
             self.append_to_payload(payload_str, c)
-        # end color
+        
+        # end base colour
+        self.append_to_payload('} .bg_colour {fill:',"colour_seperator")
+        # bg colour
+        for c in self.nft_attributes["bg_colour"]:
+            payload_str = c
+            self.append_to_payload(payload_str, c)
+ 
+
+
         self.append_to_payload(COLOUR_STYLE_END, 'endcolour')
         # add the rest
+
+
         order = ["bg", "bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
