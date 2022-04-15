@@ -75,7 +75,7 @@ class Bitbots:
         self.variable_attributes = ["bg_effects", "colour","bg_colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
-        self.bg_colours = ["#ff9999", "#ffbb99", "#ffdd99", "#ffff99", "#ddff99", "#bbff99", "#99ff99", "#99ffbb", "#99ffdd", "#99ffff", "#99ddff", "#99bbff", "#9999ff", "#bb99ff", "#dd99ff", "#ff99ff", "#ff99dd", "#ff99bb" ]
+        self.bg_colours = ["#555555","#f5a3a3","#f5bea3", "#f5daa3", "#f5f5a3", "#daf5a3","#bef5a3","#a3f5a3","#a3f5be","#a3f5da","#a3f5f5","#a3daf5","#a3bef5","#a3a3f5","#bea3f5","#daa3f5","#f5a3f5","#f5a3da","#f5a3be"]
 
         self.ref_order = ['startcolour','colour', 'bg_colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # meta data       
@@ -128,7 +128,11 @@ class Bitbots:
         # clean and get data from files
         self.nft_meta_from_files()
         # update and apply weights
+        # TODO wait for user imput after weghts?
         self.update_weights()
+        input("Edit the weights file now, press any key to continue...\n")
+        self.update_weights()
+
         # add payload refs
         self.gen_payload_meta()
         #
@@ -355,7 +359,7 @@ class Bitbots:
 
         returns a unique hex_hash identifier and random properties
         """
-        hex_hash = "0x"
+        uuidHexHash = "0x"
 
         properties = {}
         # this loop generates nfts based of weight values for traits within each attribute
@@ -363,14 +367,27 @@ class Bitbots:
             traits = [] 
             weights = []
             for trait in self.nft_attributes[attribute]:
-                traits.append(trait)
-                weights.append(self.nft_traits[trait]["weight"])
+                
+                # check trait can be added without violating max
+                current = self.nft_traits[trait]['current']
+                max = self.nft_traits[trait]['max']
+                if current < max:
+                    traits.append(trait)
+                    weights.append(self.nft_traits[trait]["weight"])
+                else:
+                    log_debug("Could not use \'" + trait + "\' as current count is " + str(current) + " and max defined is " + str(max))
+        
             # select a weighted random trait
             trait = random.choices(traits, weights)[0]
             properties[attribute] = trait
-            # convert the trait id to hexadecimal and append it to the hex_hash identifier, also add some padding
-            hex_hash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
-        return hex_hash, properties
+            # convert the trait id to hexadecimal and append it to the uuidHexHash identifier, also add some padding
+            # ignore some attributes such as colour which in this case don't create a 'unique' nft
+            attributesToIgnoreInHexHash = ['colour','bg_colour']
+            if attribute not in attributesToIgnoreInHexHash:
+                uuidHexHash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
+
+        #breakpoint()
+        return uuidHexHash, properties
 
 
     # payloads ---------------------------------------------------------------
@@ -608,6 +625,8 @@ class Bitbots:
         payloadsNeedAdding = True
         nftsLeftToMint = True
 
+        used_hashes = []
+
         # loop while there are still payloads to be added or nfts left to mint
         while payloadsNeedAdding or nftsLeftToMint:
             # check current idx
@@ -617,18 +636,28 @@ class Bitbots:
             nft_idx = int_to_hex_id(mint_idx)
 
             # generate random nft
-            used_hashes = []
             refs = []
             # run inner loop that picks properties and creates a unique id based on props (hex_hash)
-            hex_hash, properties = self.gen_random_props()  
+            uuidHexHash, properties = self.gen_random_props()  
 
             # TODO also check to ensure we don't mint more than allowed of any given trait
             # write a test but I think the hex hash does this
 
             # check for duplicates, and rerun until our new hex has is unique
-            for h in used_hashes:
-                while hex_hash not in used_hashes:
-                    hex_hash, properties = self.gen_random_props()  
+
+            while uuidHexHash in used_hashes:
+                log_debug("duplicate nft regenerating")
+                uuidHexHash, properties = self.gen_random_props()  
+            
+            used_hashes.append(uuidHexHash)
+
+            # update TRAIT meta to increase count TODO
+            # properties [ attribute ] = trait
+            for attribute in properties:
+                trait = properties[attribute]
+                self.nft_traits[trait]['current'] += 1
+
+
             # apply refs
             nft_name = 'Bitbot 0x' + nft_idx
 
