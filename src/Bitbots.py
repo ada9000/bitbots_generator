@@ -34,7 +34,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-#INPUT_DIR = "../input-testnet/"
+INPUT_DIR = "../inputv3/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -63,7 +63,7 @@ class Bitbots:
         self.max_payload_bytes = max_payload_bytes
         self.policy = policy
         # vars
-        self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
+        self.variable_attributes = ["bg_effects", "colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
         self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
@@ -285,6 +285,12 @@ class Bitbots:
         refs += self.find_payload_refs('startcolour')
         refs += self.find_payload_refs(properties['colour'])
         refs += self.find_payload_refs('endcolour')
+        
+        # backgrounds
+        refs += self.find_payload_refs('bg') 
+        refs += self.find_payload_refs(properties['bg_effects']) 
+
+        # neck
         refs += self.find_payload_refs('neck')
         # add id
         
@@ -292,7 +298,6 @@ class Bitbots:
         refs += self.find_payload_refs('id_start')
         for i, x in enumerate(nft_id):
         # for ids
-
             # id transform start
             refs += self.find_payload_refs('id_transform_start')
             # id number ere
@@ -306,6 +311,7 @@ class Bitbots:
             # id end
         refs += self.find_payload_refs('id_end')
 
+        # head shadow and other traits
         refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
@@ -435,7 +441,7 @@ class Bitbots:
         # end color
         self.append_to_payload(COLOUR_STYLE_END, 'endcolour')
         # add the rest
-        order = ["neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+        order = ["bg", "bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
             # Add each trait to payload, you can reference it with payload_meta
