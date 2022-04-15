@@ -28,13 +28,22 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
+
+# BG _ COLOUR 
+BG_BASE_COLOUR = 'style="fill:rgb(255,0,99);"'
+BG_BASE_COLOUR_REPLACE = 'class="bg_colour"'
+BG_COLOUR_STYLE_START = '<style> .bg_colour {fill:'
+BG_COLOR_STYLE_DEFAULT = '{fill: #FF0063}' # TODO deprecated?
+BG_COLOUR_STYLE_END = '} </style>'
+
+
 #-----------------------------------------------------------------------------
 DEFAULT_WEIGHT = 1.0
 MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-#INPUT_DIR = "../input-testnet/"
+INPUT_DIR = "../inputv3/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -63,10 +72,12 @@ class Bitbots:
         self.max_payload_bytes = max_payload_bytes
         self.policy = policy
         # vars
-        self.variable_attributes = ["colour", "special", "hats", "ears", "mouths", "eyes"]
+        self.variable_attributes = ["bg_effects", "colour","bg_colour", "special", "hats", "ears", "mouths", "eyes"]
         self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
         self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
-        self.ref_order = ['startcolour','colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
+        self.bg_colours = ["#555555","#f5a3a3","#f5bea3", "#f5daa3", "#f5f5a3", "#daf5a3","#bef5a3","#a3f5a3","#a3f5be","#a3f5da","#a3f5f5","#a3daf5","#a3bef5","#a3a3f5","#bea3f5","#daa3f5","#f5a3f5","#f5a3da","#f5a3be"]
+
+        self.ref_order = ['startcolour','colour', 'bg_colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
         # meta data       
         self.nft_traits = {}        # json defining each trait #TODO note this also includes count
         self.nft_attributes = {}    # json defining all attributes
@@ -117,7 +128,11 @@ class Bitbots:
         # clean and get data from files
         self.nft_meta_from_files()
         # update and apply weights
+        # TODO wait for user imput after weghts?
         self.update_weights()
+        input("Edit the weights file now, press any key to continue...\n")
+        self.update_weights()
+
         # add payload refs
         self.gen_payload_meta()
         #
@@ -180,6 +195,17 @@ class Bitbots:
             id_num += 1
         # add colours to the nft attributes
         self.nft_attributes['colour'] = self.colours
+
+        # add bg colours
+        id_num = 0
+        for trait in self.bg_colours:
+            self.nft_traits[trait] = self.nft_meta_inner('bg_colour', id_num, trait)
+            id_num += 1
+        # add colours to the nft attributes
+        self.nft_attributes['bg_colour'] = self.bg_colours
+
+
+
         # save to file 
         write_json(self.traits_meta_file, self.nft_traits)
         write_json(self.attributes_meta_file, self.nft_attributes)
@@ -221,6 +247,7 @@ class Bitbots:
         svg_str = svg_str.replace('\n', '')
         # replace svg base colours with dynamic method
         svg_str = svg_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
+        svg_str = svg_str.replace(BG_BASE_COLOUR, BG_BASE_COLOUR_REPLACE)
         # set data to the new refactored data
         return svg_str 
 
@@ -284,7 +311,15 @@ class Bitbots:
         #self.payload_meta[trait] = used_indices
         refs += self.find_payload_refs('startcolour')
         refs += self.find_payload_refs(properties['colour'])
+        refs += self.find_payload_refs('colour_seperator')
+        refs += self.find_payload_refs(properties['bg_colour'])
         refs += self.find_payload_refs('endcolour')
+        
+        # backgrounds
+        refs += self.find_payload_refs('bg') 
+        refs += self.find_payload_refs(properties['bg_effects']) 
+
+        # neck
         refs += self.find_payload_refs('neck')
         # add id
         
@@ -292,7 +327,6 @@ class Bitbots:
         refs += self.find_payload_refs('id_start')
         for i, x in enumerate(nft_id):
         # for ids
-
             # id transform start
             refs += self.find_payload_refs('id_transform_start')
             # id number ere
@@ -306,6 +340,7 @@ class Bitbots:
             # id end
         refs += self.find_payload_refs('id_end')
 
+        # head shadow and other traits
         refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
@@ -324,7 +359,7 @@ class Bitbots:
 
         returns a unique hex_hash identifier and random properties
         """
-        hex_hash = "0x"
+        uuidHexHash = "0x"
 
         properties = {}
         # this loop generates nfts based of weight values for traits within each attribute
@@ -332,14 +367,27 @@ class Bitbots:
             traits = [] 
             weights = []
             for trait in self.nft_attributes[attribute]:
-                traits.append(trait)
-                weights.append(self.nft_traits[trait]["weight"])
+                
+                # check trait can be added without violating max
+                current = self.nft_traits[trait]['current']
+                max = self.nft_traits[trait]['max']
+                if current < max:
+                    traits.append(trait)
+                    weights.append(self.nft_traits[trait]["weight"])
+                else:
+                    log_debug("Could not use \'" + trait + "\' as current count is " + str(current) + " and max defined is " + str(max))
+        
             # select a weighted random trait
             trait = random.choices(traits, weights)[0]
             properties[attribute] = trait
-            # convert the trait id to hexadecimal and append it to the hex_hash identifier, also add some padding
-            hex_hash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
-        return hex_hash, properties
+            # convert the trait id to hexadecimal and append it to the uuidHexHash identifier, also add some padding
+            # ignore some attributes such as colour which in this case don't create a 'unique' nft
+            attributesToIgnoreInHexHash = ['colour','bg_colour']
+            if attribute not in attributesToIgnoreInHexHash:
+                uuidHexHash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
+
+        #breakpoint()
+        return uuidHexHash, properties
 
 
     # payloads ---------------------------------------------------------------
@@ -425,17 +473,30 @@ class Bitbots:
         # SVG start until color
         payload_str = ""
         payload_str += SVG_start
-        payload_str += COLOUR_STYLE_START 
+        
+        # COLOURS
+        payload_str += '<style> .base_colour {fill:'
         # add start
         self.append_to_payload(payload_str, 'startcolour')
-        # add color
+        # add base colour
         for c in self.nft_attributes["colour"]:
             payload_str = c
             self.append_to_payload(payload_str, c)
-        # end color
+        
+        # end base colour
+        self.append_to_payload('} .bg_colour {fill:',"colour_seperator")
+        # bg colour
+        for c in self.nft_attributes["bg_colour"]:
+            payload_str = c
+            self.append_to_payload(payload_str, c)
+ 
+
+
         self.append_to_payload(COLOUR_STYLE_END, 'endcolour')
         # add the rest
-        order = ["neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+
+
+        order = ["bg", "bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
             # Add each trait to payload, you can reference it with payload_meta
@@ -564,6 +625,8 @@ class Bitbots:
         payloadsNeedAdding = True
         nftsLeftToMint = True
 
+        used_hashes = []
+
         # loop while there are still payloads to be added or nfts left to mint
         while payloadsNeedAdding or nftsLeftToMint:
             # check current idx
@@ -573,18 +636,28 @@ class Bitbots:
             nft_idx = int_to_hex_id(mint_idx)
 
             # generate random nft
-            used_hashes = []
             refs = []
             # run inner loop that picks properties and creates a unique id based on props (hex_hash)
-            hex_hash, properties = self.gen_random_props()  
+            uuidHexHash, properties = self.gen_random_props()  
 
             # TODO also check to ensure we don't mint more than allowed of any given trait
             # write a test but I think the hex hash does this
 
             # check for duplicates, and rerun until our new hex has is unique
-            for h in used_hashes:
-                while hex_hash not in used_hashes:
-                    hex_hash, properties = self.gen_random_props()  
+
+            while uuidHexHash in used_hashes:
+                log_debug("duplicate nft regenerating")
+                uuidHexHash, properties = self.gen_random_props()  
+            
+            used_hashes.append(uuidHexHash)
+
+            # update TRAIT meta to increase count TODO
+            # properties [ attribute ] = trait
+            for attribute in properties:
+                trait = properties[attribute]
+                self.nft_traits[trait]['current'] += 1
+
+
             # apply refs
             nft_name = 'Bitbot 0x' + nft_idx
 
