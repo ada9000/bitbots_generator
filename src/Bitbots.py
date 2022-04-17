@@ -37,6 +37,7 @@ COLOUR_STYLE_END = '} </style>'
 ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
 # base anim colour here
 # #d19494
+ANIM_DARK  = '#393939;"/></g></g>'
 
 ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
 # animation colours here
@@ -129,7 +130,7 @@ class Bitbots:
         ]
 
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-        self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end'      ,'neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
+        self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end','anim_dark','neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
         # meta data       
         self.nft_traits = {}        # json defining each trait #TODO note this also includes count
         self.nft_attributes = {}    # json defining all attributes
@@ -368,26 +369,46 @@ class Bitbots:
         
         # TODO animated bg here
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
+
+
+
         refs += self.find_payload_refs('anim_start')
 
-        refs += self.find_payload_refs(properties['bg_colour']) 
+        if properties['bg_colour'] == "#393939;":
+            refs += self.find_payload_refs("anim_dark")
+            # end as dark is not animated
 
-        refs += self.find_payload_refs('anim_mid')
+        else:
+            # animate
+            refs += self.find_payload_refs(properties['bg_colour']) 
 
-        # animation colour array here
-        refs += self.find_payload_refs('#FF0063;')
-        refs += self.find_payload_refs('#3E51FF;')
-        refs += self.find_payload_refs('#FF0063;')
+            refs += self.find_payload_refs('anim_mid')
 
-        refs += self.find_payload_refs('anim_grade_1')
+            # animation colour array here
 
-        refs += self.find_payload_refs('yellow_grade')
-        
-        refs += self.find_payload_refs('anim_grade_mid')
+            # TODO HERE 
 
-        refs += self.find_payload_refs('blue_grade')
+            if properties['bg_colour'] == "#FF0063;" or properties['bg_colour'] == "#3E51FF;":
+                refs += self.find_payload_refs('#FF0063;')
+                refs += self.find_payload_refs('#3E51FF;')
+                refs += self.find_payload_refs('#FF0063;')
+            else:
+                test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
+                for x in test:
+                    refs += self.find_payload_refs(x)
+                refs += self.find_payload_refs("#d19494;")
 
-        refs += self.find_payload_refs('anim_end')
+
+            refs += self.find_payload_refs('anim_grade_1')
+
+            refs += self.find_payload_refs('yellow_grade') # TODO REPLACE THIS IF BLACK
+            
+
+            refs += self.find_payload_refs('anim_grade_mid')
+
+            refs += self.find_payload_refs('blue_grade') # TODO REPLACE THIS IF BLACK
+
+            refs += self.find_payload_refs('anim_end')
 
 
         
@@ -571,6 +592,7 @@ class Bitbots:
         self.append_to_payload(ANIM_GRADE_1, 'anim_grade_1')
         self.append_to_payload(ANIM_GRADE_MID, 'anim_grade_mid')
         self.append_to_payload(ANIM_END, 'anim_end')
+        self.append_to_payload(ANIM_DARK, 'anim_dark')
 
         self.append_to_payload('#f2ff00;', 'yellow_grade')
         self.append_to_payload('#0006ff;', 'blue_grade')
@@ -793,7 +815,7 @@ class Bitbots:
                     s = os.path.getsize(f)
 
                     # if under size update current payload idx
-                    if s < (MAX_PAYLOAD_BYTES - MAX_PAYLOAD_BYTES*.1):
+                    if s < (MAX_PAYLOAD_BYTES):
                         current_payload_idx += 1
                         last_nft_with_payload = mint_idx
                         nft_meta = nft_meta_tmp
@@ -813,8 +835,9 @@ class Bitbots:
 
             # check file size
             s = os.path.getsize(meta_file_path)
-            if s > MAX_PAYLOAD_BYTES:
-                raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_PAYLOAD_BYTES) + "\'")
+            MAX_CARDANO_META = 15000
+            if s > MAX_CARDANO_META:
+                raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_CARDANO_META) + "\'")
 
             # update the database to include the nft details (could be more efficient, not required though)
             self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path, hasPayload=nft_payload)
