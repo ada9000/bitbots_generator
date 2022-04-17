@@ -16,7 +16,7 @@ from Nft import *
 from Utility import *
 # consts ---------------------------------------------------------------------
 # files
-INPUT_DIR = "../input"
+INPUT_DIR = "../input-mainnet/"
 #------------------------------------------------------------------------------
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
@@ -29,13 +29,27 @@ COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
 
-# BG _ COLOUR 
-BG_BASE_COLOUR = 'style="fill:rgb(255,0,99);"'
-BG_BASE_COLOUR_REPLACE = 'class="bg_colour"'
-BG_COLOUR_STYLE_START = '<style> .bg_colour {fill:'
-BG_COLOR_STYLE_DEFAULT = '{fill: #FF0063}' # TODO deprecated?
-BG_COLOUR_STYLE_END = '} </style>'
 
+
+# ANIM
+# anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
+
+ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
+# base anim colour here
+# #d19494
+
+ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
+# animation colours here
+# #d19494;#d1a894;#d1bd94;#d1d194;#bdd194;#a8d194;#94d194;#94d1a8;#94d1bd;#94d1d1;#94bdd1;#94a8d1;#9494d1;#a894d1;#bd94d1;#d194d1;#d194bd;#d194a8;#d19494;
+
+ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path></g><g id="colour45" transform="matrix(0.637292,0.637292,-0.686306,0.686306,3199.63,-851.632)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear1);"/></g><g id="colour451" serif:id="colour45" transform="matrix(0.637292,-0.637292,0.686306,0.686306,-851.632,2706.37)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear2);"/></g><g id="shadow" transform="matrix(-0.901267,2.22045e-16,-1.66533e-16,-0.970583,5468.89,5817.68)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear3);"/></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
+
+# #f2ff00;
+
+ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
+
+# #0006ff;
+ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
 
 #-----------------------------------------------------------------------------
 DEFAULT_WEIGHT = 1.0
@@ -43,7 +57,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-INPUT_DIR = "../inputv3/" # TODO
+INPUT_DIR = "../input-mainnet/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -72,12 +86,50 @@ class Bitbots:
         self.max_payload_bytes = max_payload_bytes
         self.policy = policy
         # vars
-        self.variable_attributes = ["bg_effects", "colour","bg_colour", "special", "hats", "ears", "mouths", "eyes"]
-        self.colours = ["#dbd4ff", "#ffe0e0", "#ebffe0", "#e0fcff","#8395a1","#90d7d5","#62bb9c","#90d797","#ff8b8b", "#ffc44b","#ffd700","#696969","#ffffff"]
-        self.wire_colours = [("#009bff","#fff800"), ("#ff0093","#009bff"),("#62bb7f","#bb6862")]
-        self.bg_colours = ["#393939","#f5a3a3","#f5bea3", "#f5daa3", "#f5f5a3", "#daf5a3","#bef5a3","#a3f5a3","#a3f5be","#a3f5da","#a3f5f5","#a3daf5","#a3bef5","#a3a3f5","#bea3f5","#daa3f5","#f5a3f5","#f5a3da","#f5a3be"]
+        self.variable_attributes = ["bg_effects", "colour", "bg_colour", "special", "hats", "ears", "mouths", "eyes"] #
 
-        self.ref_order = ['startcolour','colour', 'bg_colour','endcolour','neck','head_shadow','special','head','hats','ears','mouths','eyes']
+        self.colours = [
+            "#dbd4ff",
+            "#767ECA", 
+            "#90d7d5",
+            "#62bb9c",
+            "#90d797",
+            "#ff8b8b", 
+            "#ffd700",
+            "#696969",
+            "#ffffff"]
+        self.wire_colours = [
+            ("#009bff","#fff800"),
+            ("#ff0093","#009bff"),
+            ("#62bb7f","#bb6862")
+            ]
+
+        self.bg_colours = [
+            "#393939;",
+            "#FF0063;",
+            "#3E51FF;",
+            "#d19494;",
+            "#d1a894;",
+            "#d1bd94;",
+            "#d1d194;",
+            "#bdd194;",
+            "#a8d194;",
+            "#94d194;",
+            "#94d1a8;",
+            "#94d1bd;",
+            "#94d1d1;",
+            "#94bdd1;",
+            "#94a8d1;",
+            "#9494d1;",
+            "#a894d1;",
+            "#bd94d1;",
+            "#d194d1;",
+            "#d194bd;",
+            "#d194a8;"
+        ]
+
+        # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
+        self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end'      ,'neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
         # meta data       
         self.nft_traits = {}        # json defining each trait #TODO note this also includes count
         self.nft_attributes = {}    # json defining all attributes
@@ -198,11 +250,11 @@ class Bitbots:
 
         # add bg colours
         id_num = 0
-        for trait in self.bg_colours:
-            self.nft_traits[trait] = self.nft_meta_inner('bg_colour', id_num, trait)
+        for trait in self.bg_colours: #
+            self.nft_traits[trait] = self.nft_meta_inner('bg_colour', id_num, trait) #
             id_num += 1
         # add colours to the nft attributes
-        self.nft_attributes['bg_colour'] = self.bg_colours
+        self.nft_attributes['bg_colour'] = self.bg_colours #
 
 
 
@@ -247,7 +299,6 @@ class Bitbots:
         svg_str = svg_str.replace('\n', '')
         # replace svg base colours with dynamic method
         svg_str = svg_str.replace(BASE_COLOUR, BASE_COLOUR_REPLACE)
-        svg_str = svg_str.replace(BG_BASE_COLOUR, BG_BASE_COLOUR_REPLACE)
         # set data to the new refactored data
         return svg_str 
 
@@ -309,14 +360,40 @@ class Bitbots:
         """ helper function to generate refs for a give set of nft properties """
         refs = []
         #self.payload_meta[trait] = used_indices
-        refs += self.find_payload_refs('startcolour')
-        refs += self.find_payload_refs(properties['colour'])
-        refs += self.find_payload_refs('colour_seperator')
-        refs += self.find_payload_refs(properties['bg_colour'])
+        refs += self.find_payload_refs('startcolour') # TODO
+        refs += self.find_payload_refs(properties['colour']) # TODO HERE
+        #refs += self.find_payload_refs('colour_seperator')
+        #refs += self.find_payload_refs(properties['bg_colour']) #
         refs += self.find_payload_refs('endcolour')
         
-        # backgrounds
-        refs += self.find_payload_refs('bg') 
+        # TODO animated bg here
+        # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
+        refs += self.find_payload_refs('anim_start')
+
+        refs += self.find_payload_refs(properties['bg_colour']) 
+
+        refs += self.find_payload_refs('anim_mid')
+
+        # animation colour array here
+        refs += self.find_payload_refs('#FF0063;')
+        refs += self.find_payload_refs('#3E51FF;')
+        refs += self.find_payload_refs('#FF0063;')
+
+        refs += self.find_payload_refs('anim_grade_1')
+
+        refs += self.find_payload_refs('yellow_grade')
+        
+        refs += self.find_payload_refs('anim_grade_mid')
+
+        refs += self.find_payload_refs('blue_grade')
+
+        refs += self.find_payload_refs('anim_end')
+
+
+        
+
+
+        # backgrounds effects
         refs += self.find_payload_refs(properties['bg_effects']) 
 
         # neck
@@ -382,7 +459,7 @@ class Bitbots:
             properties[attribute] = trait
             # convert the trait id to hexadecimal and append it to the uuidHexHash identifier, also add some padding
             # ignore some attributes such as colour which in this case don't create a 'unique' nft
-            attributesToIgnoreInHexHash = ['colour','bg_colour']
+            attributesToIgnoreInHexHash = ['colour','bg_colour'] #
             if attribute not in attributesToIgnoreInHexHash:
                 uuidHexHash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
 
@@ -484,9 +561,24 @@ class Bitbots:
             self.append_to_payload(payload_str, c)
         
         # end base colour
-        self.append_to_payload('} .bg_colour {fill:',"colour_seperator")
-        # bg colour
-        for c in self.nft_attributes["bg_colour"]:
+        #self.append_to_payload('} .bg_colour {fill:',"colour_seperator") #
+
+
+
+        # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
+        self.append_to_payload(ANIM_START, 'anim_start')
+        self.append_to_payload(ANIM_MID, 'anim_mid')
+        self.append_to_payload(ANIM_GRADE_1, 'anim_grade_1')
+        self.append_to_payload(ANIM_GRADE_MID, 'anim_grade_mid')
+        self.append_to_payload(ANIM_END, 'anim_end')
+
+        self.append_to_payload('#f2ff00;', 'yellow_grade')
+        self.append_to_payload('#0006ff;', 'blue_grade')
+
+
+
+        # bg colours
+        for c in self.nft_attributes["bg_colour"]: #
             payload_str = c
             self.append_to_payload(payload_str, c)
  
@@ -496,7 +588,7 @@ class Bitbots:
         # add the rest
 
 
-        order = ["bg", "bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+        order = ["bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
             # Add each trait to payload, you can reference it with payload_meta
@@ -701,7 +793,7 @@ class Bitbots:
                     s = os.path.getsize(f)
 
                     # if under size update current payload idx
-                    if s < MAX_PAYLOAD_BYTES:
+                    if s < (MAX_PAYLOAD_BYTES - MAX_PAYLOAD_BYTES*.1):
                         current_payload_idx += 1
                         last_nft_with_payload = mint_idx
                         nft_meta = nft_meta_tmp
