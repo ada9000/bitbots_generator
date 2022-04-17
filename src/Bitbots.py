@@ -28,28 +28,13 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
-
-
-
-# ANIM
+# animated background consts
 # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-
 ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
-# base anim colour here
-# #d19494
 ANIM_DARK  = '#393939;"/></g></g>'
-
 ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
-# animation colours here
-# #d19494;#d1a894;#d1bd94;#d1d194;#bdd194;#a8d194;#94d194;#94d1a8;#94d1bd;#94d1d1;#94bdd1;#94a8d1;#9494d1;#a894d1;#bd94d1;#d194d1;#d194bd;#d194a8;#d19494;
-
 ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path></g><g id="colour45" transform="matrix(0.637292,0.637292,-0.686306,0.686306,3199.63,-851.632)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear1);"/></g><g id="colour451" serif:id="colour45" transform="matrix(0.637292,-0.637292,0.686306,0.686306,-851.632,2706.37)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear2);"/></g><g id="shadow" transform="matrix(-0.901267,2.22045e-16,-1.66533e-16,-0.970583,5468.89,5817.68)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear3);"/></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-
-# #f2ff00;
-
 ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-
-# #0006ff;
 ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
 
 #-----------------------------------------------------------------------------
@@ -62,9 +47,6 @@ INPUT_DIR = "../input-mainnet/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
-# [ ] implent id special tag
-# [ ] implent tally
-# [ ] fix artifacts in svg's
 # [ ] rename meta items (remove underscore etc)
 # [ ] no_<attribute> is renamed to none in metadata
 # [ ] ensure only 503 are lobsters (and these are giveaways) https://cardanoscan.io/tokenPolicy/cc7888851f0f5aa64c136e0c8fb251e9702f3f6c9efcf3a60a54f419
@@ -360,18 +342,13 @@ class Bitbots:
     def find_refs_for_props(self, properties, nft_id):
         """ helper function to generate refs for a give set of nft properties """
         refs = []
-        #self.payload_meta[trait] = used_indices
+        # bitbot colour ------------------------------------------------------
         refs += self.find_payload_refs('startcolour') # TODO
         refs += self.find_payload_refs(properties['colour']) # TODO HERE
-        #refs += self.find_payload_refs('colour_seperator')
-        #refs += self.find_payload_refs(properties['bg_colour']) #
         refs += self.find_payload_refs('endcolour')
         
-        # TODO animated bg here
+        # animated background ------------------------------------------------
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-
-
-
         refs += self.find_payload_refs('anim_start')
 
         if properties['bg_colour'] == "#393939;":
@@ -384,35 +361,37 @@ class Bitbots:
 
             refs += self.find_payload_refs('anim_mid')
 
-            # animation colour array here
-
-            # TODO HERE 
-
-            if properties['bg_colour'] == "#FF0063;" or properties['bg_colour'] == "#3E51FF;":
+            # define and use the correct bg array
+            if properties['bg_colour'] == "#FF0063;":
                 refs += self.find_payload_refs('#FF0063;')
                 refs += self.find_payload_refs('#3E51FF;')
                 refs += self.find_payload_refs('#FF0063;')
+            if properties['bg_colour'] == "#3E51FF;":
+                refs += self.find_payload_refs('#3E51FF;')
+                refs += self.find_payload_refs('#FF0063;')
+                refs += self.find_payload_refs('#3E51FF;')
             else:
+                # for pastel colours
                 test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
-                for x in test:
+                index = 0
+                start = ""
+                for i, x in enumerate(test):
+                    if x == properties['bg_colour']:
+                        index = i
+                        start = x
+                for x in test[index:]:
                     refs += self.find_payload_refs(x)
-                refs += self.find_payload_refs("#d19494;")
+                for x in test[:index]:
+                    refs += self.find_payload_refs(x)
+                refs += self.find_payload_refs(start)
 
-
+            # add anim grades TODO COULD ALL BE ONE REF if needed
             refs += self.find_payload_refs('anim_grade_1')
-
-            refs += self.find_payload_refs('yellow_grade') # TODO REPLACE THIS IF BLACK
-            
-
+            refs += self.find_payload_refs('yellow_grade')
             refs += self.find_payload_refs('anim_grade_mid')
-
-            refs += self.find_payload_refs('blue_grade') # TODO REPLACE THIS IF BLACK
-
+            refs += self.find_payload_refs('blue_grade') 
             refs += self.find_payload_refs('anim_end')
-
-
-        
-
+        # end animated background --------------------------------------------
 
         # backgrounds effects
         refs += self.find_payload_refs(properties['bg_effects']) 
@@ -421,7 +400,7 @@ class Bitbots:
         refs += self.find_payload_refs('neck')
         # add id
         
-        # id start
+        # id tag -------------------------------------------------------------
         refs += self.find_payload_refs('id_start')
         for i, x in enumerate(nft_id):
         # for ids
@@ -438,7 +417,7 @@ class Bitbots:
             # id end
         refs += self.find_payload_refs('id_end')
 
-        # head shadow and other traits
+        # head shadow and other traits ---------------------------------------
         refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
         refs += self.find_payload_refs('head')
@@ -610,7 +589,7 @@ class Bitbots:
         # add the rest
 
 
-        order = ["bg_effects", "neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+        order = ["bg_effects","neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
         known_traits = []
         for o in order:
             # Add each trait to payload, you can reference it with payload_meta
