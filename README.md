@@ -1,20 +1,23 @@
 # todo
+[] Ensure correct release i.e input is no longer called input v3
+[x] Fix id position again
+[x] if moon remove bg
+[x] sort out bg colour
+[] emoji tags? lol
+
+<g>
+id="identification "
+transform="translate(220,0)"
+
 
 [x] Generate a nft set, with the correct payloads and metadata
 [x] Export svg option
 [x] Use a database to store state
 [x] Working minting function
-
+[x] Database integration
+[x] Customer search job
+[x] Mint job
 [] Change all python files to use there own logger with it's own file? and check it works, remove ascii colours as it's too noisy
-
-[] Api interfaces with mint
-    [] User requests buy, api returns addr, PRICE + random dust.
-        [] DB updates status of next 'available' status to 'reserved'
-        [] TX finder jobs runs and looks for payment. On find it changes status in db to 'awaiting-mint' adds customer addr and tx hash
-        [] User is notified that they have paid
-        [] Mint queue job picks up the task and mints
-        [] User is shown their new nft
-        [] If no payment after 24 hours price and status are reset
 
 [] Api call to get all payload data...
 [] Api call to get all meta (could only do 721 to save data)
@@ -77,6 +80,8 @@ Start api
 - Ensure policy matched when testing likely issue is API project name is different to that in tests
 - Add a test page for meta v2 testing
 - Catch api errors - to test run with unknown policy
+
+- when exporting an svg with functions '_Image' might be duplicated. So we need to ensure all input files have unique image tags. This is due to the software I have used to generate the base svgs.
 
 ### version
 - Python 3.8.10
