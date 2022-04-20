@@ -98,10 +98,18 @@ class BlockFrostTools:
 
                 mint_id =  list(meta[i][json_tag][policy_id])[0]
                 # each metadata type to it's own dict (optionally we could put it all in one json) 
-                if label == "721":
-                    log_debug("721")
-                    # get the metadata using the 721 standard
-                    meta721[mint_id] = meta[i][json_tag][policy_id][mint_id]
+                #if label == "721":
+                #log_debug("721")
+                # get the metadata using the 721 standard
+                meta721[mint_id] = meta[i][json_tag][policy_id][mint_id]
+                # TODO get payload
+                tags = list(meta[i][json_tag])
+                if NEW_CIP in tags:
+                    payloads = list(meta[i][json_tag]['payload'])
+                    for payloadId in payloads:
+                        metaNEW_CIP[payloadId] = meta[i][json_tag]['payload'][payloadId]
+                #breakpoint()
+                """
                 elif label == NEW_CIP:
                     log_debug(NEW_CIP)
                     # for each datapackage in new CIP
@@ -111,6 +119,7 @@ class BlockFrostTools:
                         metaNEW_CIP[ref] = meta[i][json_tag][policy_id][ref]
                 else:
                     log_error("Unknown label")
+                """
         # return dict of 721 and NEW_CIP
         self.policy_meta[policy] = {'721':meta721, NEW_CIP:metaNEW_CIP}
         return meta721, metaNEW_CIP
@@ -152,8 +161,7 @@ class BlockFrostTools:
 
         # get the refs for the current nft_id
         svg_str = ""
-        #breakpoint()
-        refs = self.policy_meta[policy]['721'][nft_id][NEW_CIP]['ref']
+        refs = self.policy_meta[policy]['721'][nft_id]['references']['src']
 
         # combine all payload strings into one svg string
         for i in refs:
