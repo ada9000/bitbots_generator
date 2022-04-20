@@ -7,7 +7,8 @@ class Nft:
         self.policyid = policyid
         self.nft_name = ''
         self.nft_CIP = '721'
-        self.new_CIP = NEW_CIP
+        self.payload = 'payload'#NEW_CIP TODO
+        self.references = 'references'#NEW_CIP TODO
         self.version = '2.0'
         # mime: data:image/svg+xml;utf8
 
@@ -23,8 +24,8 @@ class Nft:
             'name':nft_name,
             'traits':properties,
             #'type':'NPC', TODO
-            self.new_CIP: {
-                'mediaType':'image/svg+xml;utf8,','ref':nft_references
+            self.references: {
+                'mediaType':'image/svg+xml;utf8,','src':nft_references
                 }
             }
 
@@ -34,22 +35,20 @@ class Nft:
                 self.nft_CIP:{
                     self.policyid:{
                         nft_name:nft_details
-                        },
+                    },
                     'version':self.version,
-                    }, 
-                self.new_CIP:{
-                    self.policyid:{
-                        str(payload_ref):nft_payload
+                    self.payload:{
+                            str(payload_ref):nft_payload
                         }
                     }
-                }
+                } 
         else:
             # ignore new CIP payload
             meta = {
                 self.nft_CIP:{
                     self.policyid:{
                         nft_name:nft_details
-                        },
+                    },
                     'version':self.version,
                     },
                 }
@@ -58,7 +57,8 @@ class Nft:
 
     def append_more_data(self, meta, payload_ref:int, nft_payload:list):
         new_meta = copy.deepcopy(meta)
-        new_meta[self.new_CIP][self.policyid][payload_ref] = nft_payload
+        #new_meta[self.new_CIP][self.policyid][payload_ref] = nft_payload
+        new_meta['721'][self.payload][payload_ref] = nft_payload
         return new_meta
 
 
