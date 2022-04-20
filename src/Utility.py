@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE, STDOUT
 logging.basicConfig(level=logging.DEBUG)
 
 # consts ---------------------------------------------------------------------
-NEW_CIP = "722"
+NEW_CIP = "payload"
 MAINNET = "--mainnet"
 TESTNET = "--testnet-magic 1097911063"
 NETWORKS = [MAINNET, TESTNET]
@@ -65,7 +65,8 @@ def read_file_return_data(filepath):
 def write_json(filepath, data):
     #TODO put mutex here?
     with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+        #json.dump(data, f, ensure_ascii=False, indent=4)
+        json.dump(data, f, ensure_ascii=False, indent=None)
     return
 
 def check_files_exist(files:list):
