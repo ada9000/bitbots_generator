@@ -43,7 +43,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-INPUT_DIR = "../input-mainnet/" # TODO
+INPUT_DIR = "../input-testnet/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -349,48 +349,61 @@ class Bitbots:
         
         # animated background ------------------------------------------------
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-        refs += self.find_payload_refs('anim_start')
 
-        if properties['bg_colour'] == "#393939;":
-            refs += self.find_payload_refs("anim_dark")
-            # end as dark is not animated
+        bgEffectsWithNoBackground = ['moon', 'red_planet', 'gas_giant']
 
-        else:
-            # animate
-            refs += self.find_payload_refs(properties['bg_colour']) 
+        if properties['bg_effects'] not in bgEffectsWithNoBackground:
+            # if not planet bg effect
 
-            refs += self.find_payload_refs('anim_mid')
+            refs += self.find_payload_refs('anim_start')
 
-            # define and use the correct bg array
-            if properties['bg_colour'] == "#FF0063;":
-                refs += self.find_payload_refs('#FF0063;')
-                refs += self.find_payload_refs('#3E51FF;')
-                refs += self.find_payload_refs('#FF0063;')
-            if properties['bg_colour'] == "#3E51FF;":
-                refs += self.find_payload_refs('#3E51FF;')
-                refs += self.find_payload_refs('#FF0063;')
-                refs += self.find_payload_refs('#3E51FF;')
+            if properties['bg_colour'] == "#393939;":
+                refs += self.find_payload_refs("anim_dark")
+                # end as dark is not animated
+
             else:
-                # for pastel colours
-                test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
-                index = 0
-                start = ""
-                for i, x in enumerate(test):
-                    if x == properties['bg_colour']:
-                        index = i
-                        start = x
-                for x in test[index:]:
-                    refs += self.find_payload_refs(x)
-                for x in test[:index]:
-                    refs += self.find_payload_refs(x)
-                refs += self.find_payload_refs(start)
+                # animate
+                refs += self.find_payload_refs(properties['bg_colour']) 
 
-            # add anim grades TODO COULD ALL BE ONE REF if needed
-            refs += self.find_payload_refs('anim_grade_1')
-            refs += self.find_payload_refs('yellow_grade')
-            refs += self.find_payload_refs('anim_grade_mid')
-            refs += self.find_payload_refs('blue_grade') 
-            refs += self.find_payload_refs('anim_end')
+                refs += self.find_payload_refs('anim_mid')
+
+                # define and use the correct bg array
+                if properties['bg_colour'] == "#FF0063;":
+                    refs += self.find_payload_refs('#FF0063;')
+                    refs += self.find_payload_refs('#3E51FF;')
+                    refs += self.find_payload_refs('#FF0063;')
+                elif properties['bg_colour'] == "#3E51FF;":
+                    refs += self.find_payload_refs('#3E51FF;')
+                    refs += self.find_payload_refs('#FF0063;')
+                    refs += self.find_payload_refs('#3E51FF;')
+                else:
+                    # for pastel colours
+                    test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
+                    index = 0
+                    start = ""
+                    for i, x in enumerate(test):
+                        if x == properties['bg_colour']:
+                            index = i
+                            start = x
+
+                    for x in test[index:]:
+                        if x != '':
+                            refs += self.find_payload_refs(x)
+                    for x in test[:index]:
+                        if x != '':
+                            refs += self.find_payload_refs(x)
+
+                    refs += self.find_payload_refs(start)
+
+                # add anim grades TODO COULD ALL BE ONE REF if needed
+                refs += self.find_payload_refs('anim_grade_1')
+                refs += self.find_payload_refs('yellow_grade')
+                refs += self.find_payload_refs('anim_grade_mid')
+                refs += self.find_payload_refs('blue_grade') 
+                refs += self.find_payload_refs('anim_end')
+        else:
+            log_debug(nft_id + " has a planet ignoreing bg")
+        
         # end animated background --------------------------------------------
 
         # backgrounds effects
@@ -742,6 +755,14 @@ class Bitbots:
                 log_debug("duplicate nft regenerating")
                 uuidHexHash, properties = self.gen_random_props()  
             
+            # special if nft_idx
+            if nft_idx == "0404":
+                #properties = "404"
+                #TODO
+                pass
+
+
+
             used_hashes.append(uuidHexHash)
 
             # update TRAIT meta to increase count TODO
