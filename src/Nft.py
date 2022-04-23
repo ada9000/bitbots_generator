@@ -9,7 +9,7 @@ class Nft:
         self.nft_CIP = '721'
         self.payload = 'payload'#NEW_CIP TODO
         self.references = 'references'#NEW_CIP TODO
-        self.version = '2.0'
+        self.version = '2'
         # mime: data:image/svg+xml;utf8
 
     def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:list, nft_references:list, properties):
