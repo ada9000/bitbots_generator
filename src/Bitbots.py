@@ -43,7 +43,7 @@ MINT_MAX = 8192
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
 # TODO remove
-INPUT_DIR = "../input-testnet/" # TODO
+#INPUT_DIR = "../input-testnet/" # TODO
 #MINT_MAX = 60
 #-----------------------------------------------------------------------------
 # TODO
@@ -721,6 +721,18 @@ class Bitbots:
         return names
     # ALL THIS MIGRATE TO API MANAGER ----------------------------------------------------------------------------------------------------
 
+    def clean_props(self, properties):
+        cleanPropNames = {}
+        for x in properties:
+            newAttribute = x.replace('_',' ')
+            newTrait = properties[x].replace('_',' ')
+            # replace no <trait> with none
+            if "no " in newTrait:
+                newTrait = "none"
+            cleanPropNames[newAttribute] = newTrait
+        return cleanPropNames
+            
+
 
     def create_new_set(self):
         # minting vars TODO put inside local function
@@ -776,6 +788,9 @@ class Bitbots:
             nft_name = 'Bitbot 0x' + nft_idx
 
             refs = self.find_refs_for_props(properties, nft_idx)
+            
+            # clean property names for payload metadata
+            properties = self.clean_props(properties)
 
             # payload
             nft_payload = None
