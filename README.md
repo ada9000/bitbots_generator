@@ -1,4 +1,6 @@
 # todo
+[] mouths should be mouths
+[] IPFS (I guess -_-)
 [] Ensure correct release i.e input is no longer called input v3
 [x] Fix id position again
 [x] if moon remove bg
