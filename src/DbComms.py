@@ -227,12 +227,15 @@ class DbComms:
     
     def getNftPagination(self, index):
         where = "intId >= " + str(index) + " LIMIT 32"
-        res = self.select("hexId, intId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE, where)
+        #res = self.select("hexId, intId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE, where)
+        res = self.select("hexId, intId, nftName, status, hasPayload, meta, svg", NFT_STATUS_TABLE, where)
         paginationJson = {}
 
-        for hexId, intId, nftName, status, hasPayload, meta in res:
+        for hexId, intId, nftName, status, hasPayload, meta, svg in res:
             meta = json.loads(meta) # TODO convert to null if status 
-            paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+            #paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+            svg = svg.decode('utf-8')
+            paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta, "svg":svg}
 
         return paginationJson
 
