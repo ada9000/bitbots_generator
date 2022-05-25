@@ -80,7 +80,8 @@ class Bitbots:
             "#ff8b8b", 
             "#ffd700",
             "#696969",
-            "#ffffff"]
+            "#ffffff",
+            "#2897e0"]
         self.wire_colours = [
             ("#009bff","#fff800"),
             ("#ff0093","#009bff"),
@@ -110,6 +111,8 @@ class Bitbots:
             "#d194bd;",
             "#d194a8;"
         ]
+
+        self.moonPhases = ['🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔']
 
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
         self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end','anim_dark','neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
