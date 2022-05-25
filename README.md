@@ -1,11 +1,39 @@
 # todo
-[] mouths should be mouths
+[x] mouths should be mouths
+[] merge background colour with planets in effects
+[] if bg is planet effect is none
 [] IPFS (I guess -_-)
 [] Ensure correct release i.e input is no longer called input v3
 [x] Fix id position again
 [x] if moon remove bg
 [x] sort out bg colour
 [] emoji tags? lol
+
+[x] ensure replace _ with space in nft traits etc
+[] special random strings that are traits...
+
+
+[] enchantments 0x | defense set
+    circuit protection, enchanted surface, 
+[] enchantments 0x | offense set
+[] bit-flipped option
+
+
+enchantments
+    big brain? | gm? / ngmi? | elven armour | solar | wind |
+    agi core | ai core | heat shielding | water resistant | soul encapsulation |
+    potato | plant based enhancements | 
+
+technology 
+    elven | plant | unknown
+
+rankings
+    efficiency
+    armour
+    health
+    intelligence
+
+
 
 <g>
 id="identification "
@@ -86,4 +114,4 @@ Start api
 - when exporting an svg with functions '_Image' might be duplicated. So we need to ensure all input files have unique image tags. This is due to the software I have used to generate the base svgs.
 
 ### version
-- Python 3.8.10
+- Python 3.8.1
