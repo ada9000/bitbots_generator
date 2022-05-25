@@ -1,3 +1,4 @@
+from numpy import fix
 from Utility import NEW_CIP
 import copy
 
@@ -14,7 +15,9 @@ TRAIT_FIXES = {
     "jkr":"JKR",
     "rj45":"RJ45",
     "#ffd700":"Gold",
-    "#2897e0":"Diamond"
+    "#2897e0":"Diamond",
+    "#FF0063;":"Hot Pink",  # cool bg colour
+    "#3E51FF;":"Deep Blue", # cool bg colour
     }
 
 
@@ -38,6 +41,7 @@ class Nft:
             # make any colours uppercase
             if "colour" in attribute:
                 fixedTrait = trait.upper()
+                fixedTrait = fixedTrait.replace(';','')
             
             # fix values
             if attribute in ATTRIBUTE_FIXES.keys():
