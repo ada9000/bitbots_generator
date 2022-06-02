@@ -30,12 +30,26 @@ COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
 # animated background consts
 # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
-ANIM_DARK  = '#393939;"/></g></g>'
+# ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
+# ANIM_DARK  = '#393939;"/></g></g>'
+# ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
+# ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path></g><g id="colour45" transform="matrix(0.637292,0.637292,-0.686306,0.686306,3199.63,-851.632)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear1);"/></g><g id="colour451" serif:id="colour45" transform="matrix(0.637292,-0.637292,0.686306,0.686306,-851.632,2706.37)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear2);"/></g><g id="shadow" transform="matrix(-0.901267,2.22045e-16,-1.66533e-16,-0.970583,5468.89,5817.68)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear3);"/></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
+# ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
+# ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
+
+
+ANIM_START = '<g id="bg"><path id="solid" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:'
+ANIM_DARK  = '#1f1f1f;"/></path></g>'
 ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
-ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path></g><g id="colour45" transform="matrix(0.637292,0.637292,-0.686306,0.686306,3199.63,-851.632)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear1);"/></g><g id="colour451" serif:id="colour45" transform="matrix(0.637292,-0.637292,0.686306,0.686306,-851.632,2706.37)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear2);"/></g><g id="shadow" transform="matrix(-0.901267,2.22045e-16,-1.66533e-16,-0.970583,5468.89,5817.68)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear3);"/></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
+ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path> <path id="hue_b" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:url(#_Linear1);"/><path id="hue_a" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:url(#_Linear2);"/></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-5906,5906,-5906,-5906,5906,0)"><stop offset="0" style="stop-color:'
+# colour here
+ANIM_GRADE_MID = 'stop-opacity:0.3"/><stop offset="1" style="stop-color:white;stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-5906,-5906,5906,-5906,5906,5906)"><stop offset="0" style="stop-color:'
+# colour here
+ANIM_END = 'stop-opacity:0.3"/><stop offset="1" style="stop-color:white;stop-opacity:0.2"/></linearGradient></defs>'
+
+# unquie
+MISSING_404_ID = '0001'
+#MISSING_404_ID = '0404'
 
 #-----------------------------------------------------------------------------
 DEFAULT_WEIGHT = 1.0
@@ -112,7 +126,13 @@ class Bitbots:
             "#d194a8;"
         ]
 
-        self.moonPhases = ['🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔']
+        self.moonPhases = ['🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌚']
+        self.luckyFruit = ['🍒','🍓','🍊','🍎','🍈']
+        self.faction = ['Unknown','Interstellar Elves','AGI']
+        self.programming = ['Biological','9000','Loonix','Custom','Glorified Toaster']
+
+        #self.metaPhysics = ['Interstellar', 'Voxel', 'Simulated', 'IRL', 'Based']
+
 
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
         self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end','anim_dark','neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
@@ -343,7 +363,10 @@ class Bitbots:
         return res
 
     def find_refs_for_props(self, properties, nft_id):
-        """ helper function to generate refs for a give set of nft properties """
+        """ 
+        helper function to generate refs for a give set of nft properties 
+        This is the best place to modify the nft
+        """
         refs = []
         # bitbot colour ------------------------------------------------------
         refs += self.find_payload_refs('startcolour') # TODO
@@ -433,6 +456,12 @@ class Bitbots:
             # id end
         refs += self.find_payload_refs('id_end')
 
+        
+        # unique nfts here
+        if nft_id == MISSING_404_ID or properties['special'] == 'headless': # TODO implement or remove headless?
+            refs += self.find_payload_refs('end')
+            return refs
+
         # head shadow and other traits ---------------------------------------
         refs += self.find_payload_refs('head_shadow')
         refs += self.find_payload_refs(properties['special'])
@@ -453,6 +482,7 @@ class Bitbots:
         returns a unique hex_hash identifier and random properties
         """
         uuidHexHash = "0x"
+        fullUUID = "0x"
 
         properties = {}
         # this loop generates nfts based of weight values for traits within each attribute
@@ -475,10 +505,14 @@ class Bitbots:
             properties[attribute] = trait
             # convert the trait id to hexadecimal and append it to the uuidHexHash identifier, also add some padding
             # ignore some attributes such as colour which in this case don't create a 'unique' nft
-            attributesToIgnoreInHexHash = ['colour','bg_colour'] #
+            
+            attributesToIgnoreInHexHash = ['colour','bg_colour']
             if attribute not in attributesToIgnoreInHexHash:
                 uuidHexHash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
 
+            fullUUID += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2).upper()
+
+        properties['uid'] = fullUUID # save unquie id for metadata
         #breakpoint()
         return uuidHexHash, properties
 
@@ -770,11 +804,12 @@ class Bitbots:
                 log_debug("duplicate nft regenerating")
                 uuidHexHash, properties = self.gen_random_props()  
             
-            # special if nft_idx
-            if nft_idx == "0404":
+            # special if nft_idx TODO handled else where
+            #if nft_idx == "0404":
                 #properties = "404"
                 #TODO
-                pass
+            #    pass
+            
 
 
 
@@ -784,6 +819,8 @@ class Bitbots:
             # properties [ attribute ] = trait
             for attribute in properties:
                 trait = properties[attribute]
+                if attribute == 'uid':
+                    continue
                 self.nft_traits[trait]['current'] += 1
 
 
@@ -794,6 +831,17 @@ class Bitbots:
             
             # clean property names for payload metadata
             properties = self.clean_props(properties)
+
+            # alter properties tags here
+            if nft_idx == MISSING_404_ID or properties['special'] == 'headless':
+                ignoreKeys = ['bg effects', 'colour', 'bg colour']
+                for key, value in properties.items():
+                    if key in ignoreKeys:
+                        continue
+                    else:
+                        properties[key] = 'none'
+                properties['special'] = 'headless'
+                breakpoint()
 
             # payload
             nft_payload = None
@@ -873,6 +921,11 @@ class Bitbots:
                 payloadsNeedAdding = False
 
         log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
+
+        log_debug("UID -------")
+        for attribute in self.variable_attributes:
+            log_debug(attribute)
+        log_debug("END UID ----")
 
         # return the nft idx of the last nft with a payload
         self.db.setAllGenerated()
