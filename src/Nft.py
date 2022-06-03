@@ -6,7 +6,7 @@ ATTRIBUTE_FIXES = {
     "bg effects":"Effects",
     "colour":"Base colour",
     "bg colour":"Background colour",
-    "bg effects":"Effects",
+    "bg effects":"Background",
     "hats":"Hat",
     "mouths":"Mouth",
     }
@@ -22,7 +22,10 @@ TRAIT_FIXES = {
 
 
 class Nft:
-    def __init__(self, policyid:str="todo"):
+    def __init__(self, policyid:str=None):
+        
+        if policyid == None:
+            raise Exception("NFT has no policy defined in parameters.")
 
         self.policyid = policyid
         self.nft_name = ''
@@ -51,19 +54,32 @@ class Nft:
 
             fixedProperties[fixedAttribute] = fixedTrait
 
+            # TODO
+            # remove colours????
+            # this would make it more fun for statistics
+
         return fixedProperties
 
-    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:list, nft_references:list, properties):
+    def generate_nft(self, nft_name:str, payload_ref:int, nft_payload:list, nft_references:list, properties, ipfs_hash:str=None):
         # TODO note nft_references might be ints but json only allows string keys
+        if ipfs_hash == None:
+            raise Exception("NFT generate_nft() is missing a ipfs_hash in parameters")
+
         meta = {}
         self.nft_name = nft_name
+        uid = properties['uid']
+        properties.pop('uid')
+        # apply custom defined fixes to metadata... before saved ready for minting
         properties = self.fixProperties(properties)
+
         # 721 
         # notice the new CIP line
         # TODO convert this to variables passed into method
         nft_details = {
             'project':'Bitbots',
             'name':nft_name,
+            'image':f"ipfs://{ipfs_hash}",
+            'Unique identification':uid,
             'traits':properties,
             #'type':'NPC', TODO
             self.references: {
