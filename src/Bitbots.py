@@ -11,6 +11,7 @@ import re
 import sys
 import shutil
 from DbComms import NFT_STATUS_TABLE, DbComms
+from Ipfs import IpfsManager
 # local files
 from Nft import *
 from Utility import *
@@ -20,7 +21,7 @@ INPUT_DIR = "../input-mainnet/"
 #------------------------------------------------------------------------------
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
-SVG_start = '<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
+SVG_start = '<svg width=\"973\" height=\"973\" viewBox=\"0 0 5906 5906\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">'
 SVG_end = '</svg>'
 # colour consts used to replace SVG colours with variables
 BASE_COLOUR = 'style="fill:rgb(219,212,255);"'
@@ -37,9 +38,11 @@ COLOUR_STYLE_END = '} </style>'
 # ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
 # ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
 
+#DARK_BG_COLOUR = "#393939;"
+DARK_BG_COLOUR = "#141414;"
 
 ANIM_START = '<g id="bg"><path id="solid" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:'
-ANIM_DARK  = '#1f1f1f;"/></path></g>'
+ANIM_DARK  = DARK_BG_COLOUR + '"/></g>'
 ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
 ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path> <path id="hue_b" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:url(#_Linear1);"/><path id="hue_a" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:url(#_Linear2);"/></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-5906,5906,-5906,-5906,5906,0)"><stop offset="0" style="stop-color:'
 # colour here
@@ -85,6 +88,8 @@ class Bitbots:
         # vars
         self.variable_attributes = ["bg_effects", "colour", "bg_colour", "special", "hats", "ears", "mouths", "eyes"] #
 
+        self.requiresDarkAndStarsBg = ['moon', 'red_planet', 'gas_giant']
+
         self.colours = [
             "#dbd4ff",
             "#767ECA", 
@@ -103,7 +108,7 @@ class Bitbots:
             ]
 
         self.bg_colours = [
-            "#393939;",
+            DARK_BG_COLOUR,
             "#FF0063;",
             "#3E51FF;",
             "#d19494;",
@@ -156,6 +161,9 @@ class Bitbots:
 
         # db
         self.db = DbComms(dbName=project, maxMint=self.max_mint, adaPrice=adaPrice) # TODO PASS IN PRICE
+        # ipfs
+        self.ipfs = IpfsManager()
+
         # define files
         self.traits_meta_file       = self.project_dir + "_nft-trait-meta.json"
         self.attributes_meta_file   = self.project_dir + "_nft-attributes-meta.json"
@@ -376,64 +384,62 @@ class Bitbots:
         # animated background ------------------------------------------------
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
 
-        bgEffectsWithNoBackground = ['moon', 'red_planet', 'gas_giant']
 
-        if properties['bg_effects'] not in bgEffectsWithNoBackground:
-            # if not planet bg effect
+        refs += self.find_payload_refs('anim_start')
 
-            refs += self.find_payload_refs('anim_start')
-
-            if properties['bg_colour'] == "#393939;":
-                refs += self.find_payload_refs("anim_dark")
-                # end as dark is not animated
-
-            else:
-                # animate
-                refs += self.find_payload_refs(properties['bg_colour']) 
-
-                refs += self.find_payload_refs('anim_mid')
-
-                # define and use the correct bg array
-                if properties['bg_colour'] == "#FF0063;":
-                    refs += self.find_payload_refs('#FF0063;')
-                    refs += self.find_payload_refs('#3E51FF;')
-                    refs += self.find_payload_refs('#FF0063;')
-                elif properties['bg_colour'] == "#3E51FF;":
-                    refs += self.find_payload_refs('#3E51FF;')
-                    refs += self.find_payload_refs('#FF0063;')
-                    refs += self.find_payload_refs('#3E51FF;')
-                else:
-                    # for pastel colours
-                    test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
-                    index = 0
-                    start = ""
-                    for i, x in enumerate(test):
-                        if x == properties['bg_colour']:
-                            index = i
-                            start = x
-
-                    for x in test[index:]:
-                        if x != '':
-                            refs += self.find_payload_refs(x)
-                    for x in test[:index]:
-                        if x != '':
-                            refs += self.find_payload_refs(x)
-
-                    refs += self.find_payload_refs(start)
-
-                # add anim grades TODO COULD ALL BE ONE REF if needed
-                refs += self.find_payload_refs('anim_grade_1')
-                refs += self.find_payload_refs('yellow_grade')
-                refs += self.find_payload_refs('anim_grade_mid')
-                refs += self.find_payload_refs('blue_grade') 
-                refs += self.find_payload_refs('anim_end')
+        if properties['bg_colour'] == DARK_BG_COLOUR or properties['bg_effects'] in self.requiresDarkAndStarsBg:
+            refs += self.find_payload_refs("anim_dark")
+            # end as dark is not animated
         else:
-            log_debug(nft_id + " has a planet ignoreing bg")
+            # animate
+            refs += self.find_payload_refs(properties['bg_colour']) 
+
+            refs += self.find_payload_refs('anim_mid')
+
+            # define and use the correct bg array
+            if properties['bg_colour'] == "#FF0063;":
+                refs += self.find_payload_refs('#FF0063;')
+                refs += self.find_payload_refs('#3E51FF;')
+                refs += self.find_payload_refs('#FF0063;')
+            elif properties['bg_colour'] == "#3E51FF;":
+                refs += self.find_payload_refs('#3E51FF;')
+                refs += self.find_payload_refs('#FF0063;')
+                refs += self.find_payload_refs('#3E51FF;')
+            else:
+                # for pastel colours
+                test = ["#d19494;","#d1a894;","#d1bd94;","#d1d194;","#bdd194;","#a8d194;","#94d194;","#94d1a8;","#94d1bd;","#94d1d1;","#94bdd1;","#94a8d1;","#9494d1;","#a894d1;","#bd94d1;","#d194d1;","#d194bd;","#d194a8;"]
+                index = 0
+                start = ""
+                for i, x in enumerate(test):
+                    if x == properties['bg_colour']:
+                        index = i
+                        start = x
+
+                for x in test[index:]:
+                    if x != '':
+                        refs += self.find_payload_refs(x)
+                for x in test[:index]:
+                    if x != '':
+                        refs += self.find_payload_refs(x)
+
+                refs += self.find_payload_refs(start)
+
+            # add anim grades TODO COULD ALL BE ONE REF if needed
+            refs += self.find_payload_refs('anim_grade_1')
+            refs += self.find_payload_refs('yellow_grade')
+            refs += self.find_payload_refs('anim_grade_mid')
+            refs += self.find_payload_refs('blue_grade') 
+            refs += self.find_payload_refs('anim_end')
         
         # end animated background --------------------------------------------
 
         # backgrounds effects
-        refs += self.find_payload_refs(properties['bg_effects']) 
+
+        if properties['bg_effects'] in self.requiresDarkAndStarsBg:
+            refs += self.find_payload_refs('shooting_stars')
+            refs += self.find_payload_refs(properties['bg_effects']) 
+        else:
+            refs += self.find_payload_refs(properties['bg_effects']) 
 
         # neck
         refs += self.find_payload_refs('neck')
@@ -505,7 +511,9 @@ class Bitbots:
             properties[attribute] = trait
             # convert the trait id to hexadecimal and append it to the uuidHexHash identifier, also add some padding
             # ignore some attributes such as colour which in this case don't create a 'unique' nft
-            
+            if properties['bg_effects'] in self.requiresDarkAndStarsBg:
+                properties['bg_colour'] = DARK_BG_COLOUR
+
             attributesToIgnoreInHexHash = ['colour','bg_colour']
             if attribute not in attributesToIgnoreInHexHash:
                 uuidHexHash += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2)
@@ -785,7 +793,7 @@ class Bitbots:
         # loop while there are still payloads to be added or nfts left to mint
         while payloadsNeedAdding or nftsLeftToMint:
             # check current idx
-            n = Nft(self.policy)
+            n = Nft(policyid=self.policy)
             
             # set index
             nft_idx = int_to_hex_id(mint_idx)
@@ -854,8 +862,23 @@ class Bitbots:
                     nft_payload = self.payload_data[str(current_payload_idx)]
                 last_nft_with_payload = mint_idx
 
+
+            # write svg ----------------------------------------------------------
+            svg_file_path = self.nft_svg_dir + nft_idx + ".svg"
+            self.nft_to_svg(path=svg_file_path, refs=refs)
+
+            # get ipfs hash from block frost
+            ipfs_hash = self.ipfs.add(svg_file_path)
+
             # create the nft meta with the payload index
-            nft_meta = n.generate_nft(nft_name=nft_name, payload_ref=current_payload_idx, nft_payload=nft_payload, nft_references=refs, properties=properties)
+            nft_meta = n.generate_nft(
+                nft_name=nft_name,
+                payload_ref=current_payload_idx,
+                nft_payload=nft_payload, 
+                nft_references=refs, 
+                properties=properties,
+                ipfs_hash=ipfs_hash
+            )
             current_payload_idx += 1 #TODO fit more payload into one nft
 
             # append payloads ------------------------------------------------------------------
@@ -895,9 +918,6 @@ class Bitbots:
             meta_file_path = self.nft_meta_dir + nft_idx + ".json"
             write_json(meta_file_path ,nft_meta)
 
-            # write svg ----------------------------------------------------------
-            svg_file_path = self.nft_svg_dir + nft_idx + ".svg"
-            self.nft_to_svg(path=svg_file_path, refs=refs)
 
             # check file size
             s = os.path.getsize(meta_file_path)
