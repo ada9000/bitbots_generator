@@ -13,14 +13,15 @@ from threading import Thread, Lock
 class ApiManager:
     # TODO pass in reference to object of tx_ids
     # with mutex when a process is processing a tx it adds it to list
-    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100, project:str='', max_mint:int=8192):
+    def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100, project:str=None, max_mint:int=8192, new_policy:bool=False):
         if mint_wallet == None:
             raise Exception('Wallet not valid')
             #wallet = Wallet(name='', network=network)
         
         # CardanoComms will generate the project directory
-        self.cc = CardanoComms(network=network, project=project)
+        self.cc = CardanoComms(network=network, new_policy=new_policy, project=project,)
         # set project dir 
+        self.project = project
         self.project_dir = PROJECT_DIR + project
         # set project json
         self.project_json = self.project_dir + "/project.json"
@@ -170,9 +171,10 @@ class ApiManager:
         sold_out = self.db.sold_out()
         while not sold_out:
             log_debug("Customer job looping start")
-            logging.debug("Curstomer job waiting for \'" + str(lace_to_ada(self.lace_mint_price)) + "\' ada in \'" + self.wallet.addr + "\'")
+            log_debug("Curstomer job waiting for \'" + str(lace_to_ada(self.lace_mint_price)) + "\' ada in \'" + self.wallet.addr + "\'")
             txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.lace_mint_price)
             while not txHashIdList:
+                log_debug("Checking for customer...")
                 time.sleep(20)
                 txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=self.lace_mint_price)
 
@@ -197,8 +199,8 @@ class ApiManager:
                     self.db.add_customer(address=customer_addr, txId=txId, txHash=txHash)
                     log_debug("Customer added with address \'" + customer_addr + "\'")
             sold_out = self.db.sold_out()
-
-
+        
+        log_info(f"Customer job finished for project '{self.project}'")
 
     # TODO
     def mint_job(self):
@@ -218,10 +220,10 @@ class ApiManager:
             if mintList:
                 for hexId, customerAddr, nftName, txHash, txId, metaDataPath in mintList:
                     # set status to in progress and keep attempting mint
-                    self.db.setStatus(hexId, STATUS_IN_PROGRESS)
+                    #self.db.setStatus(hexId, STATUS_IN_PROGRESS)
                     successfulMint = False
                     while not successfulMint:
-                        log_debug("mint attempt")
+                        log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
                         successfulMint = self.cc.mint_nft_using_txhash(
                             metadata_path=metaDataPath, 
                             recv_addr=customerAddr, 
@@ -231,6 +233,9 @@ class ApiManager:
                             tx_id=txId, 
                             price=self.lace_mint_price
                         )
+                        if not successfulMint:
+                            log_error("Mint job waiting 25 seconds due to minting error")
+                            time.sleep(25)
                     # update status to sold
                     self.db.setStatus(hexId, STATUS_SOLD)
                     log_debug("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
@@ -245,15 +250,13 @@ class ApiManager:
             # b) multiple payment wallets, would be faster, but more wallets to manage easy with cntools though, db needs to be updated again
                 # would require a purchase of ada handles bb0 bb1 bb2 bb3 bb4 bb5 bb6
 
-        pass
+        log_info(f"Mint job finished for project '{self.project}'")
 
     # TODO
-    def mint(self):
-        # mint 
-
-        # set status in db to sold
+    def refund_job(self):
+        # TODO must ensure we don't drain fees by loop refunding the 
+        # mint wallet!!!!!!!!!!
         pass
-
 
     # API --------------------------------------------------------------------
     
@@ -276,6 +279,7 @@ class ApiManager:
             # return buy addr and the price  
         return None
 
+    # in use
     def nftPagination(self, index):
         return self.db.getNftPagination(index=index)
 

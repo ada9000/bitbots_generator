@@ -500,7 +500,7 @@ class Bitbots:
                 # check trait can be added without violating max
                 current = self.nft_traits[trait]['current']
                 max = self.nft_traits[trait]['max']
-                if current < max:
+                if current < int(max):
                     traits.append(trait)
                     weights.append(self.nft_traits[trait]["weight"])
                 else:
@@ -786,12 +786,14 @@ class Bitbots:
         last_nft_with_payload = None
 
         payloadsNeedAdding = True
-        nftsLeftToMint = True
 
         used_hashes = []
 
+        testONLY = 0
+
         # loop while there are still payloads to be added or nfts left to mint
-        while payloadsNeedAdding or nftsLeftToMint:
+        breakpoint()
+        for i in range(int(self.max_mint)):
             # check current idx
             n = Nft(policyid=self.policy)
             
@@ -807,24 +809,12 @@ class Bitbots:
             # write a test but I think the hex hash does this
 
             # check for duplicates, and rerun until our new hex has is unique
-
             while uuidHexHash in used_hashes:
                 log_debug("duplicate nft regenerating")
                 uuidHexHash, properties = self.gen_random_props()  
             
-            # special if nft_idx TODO handled else where
-            #if nft_idx == "0404":
-                #properties = "404"
-                #TODO
-            #    pass
-            
-
-
-
             used_hashes.append(uuidHexHash)
 
-            # update TRAIT meta to increase count TODO
-            # properties [ attribute ] = trait
             for attribute in properties:
                 trait = properties[attribute]
                 if attribute == 'uid':
@@ -926,7 +916,7 @@ class Bitbots:
                 raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_CARDANO_META) + "\'")
 
             # update the database to include the nft details (could be more efficient, not required though)
-            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path, hasPayload=nft_payload)
+            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path, hasPayload=nft_payload, ipfsHash=ipfs_hash)
             
             # nft created
             self.db.select("*", NFT_STATUS_TABLE ,"hexId='"+nft_idx+"'")
@@ -934,11 +924,15 @@ class Bitbots:
             mint_idx += 1
 
             # if there are still nfts to be minted keep looping
-            if mint_idx > self.max_mint:
-                nftsLeftToMint = False
+            ##if mint_idx > int(self.max_mint):
+            ##    nftsLeftToMint = False
             # if there are still payloads to be added keep looping
             if current_payload_idx > len(self.payload_data) - 1:
                 payloadsNeedAdding = False
+
+        if payloadsNeedAdding:
+            log_error("Not all payloads have been added!")
+            input("Press any key to continue\n> ")
 
         log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
 

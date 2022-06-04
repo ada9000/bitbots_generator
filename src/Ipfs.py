@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from blockfrost import BlockFrostIPFS, ApiError
 import os
+from Utility import *
 
 class IpfsManager:
     def __init__(self):
@@ -24,22 +25,23 @@ class IpfsManager:
         try:
             ipfs_object = self.ipfs.add(file_path)
             file_hash = ipfs_object.ipfs_hash
-            print(file_hash)
+            #print(file_hash)
         except ApiError as e:
             error = True
-            print(e)
+            log_error(str(e))
 
         try:
             file_data = self.ipfs.gateway(IPFS_path=file_hash).text
-            print(file_data)
+            #print(file_data)
         except ApiError as e:
             error = True
-            print(e)
+            log_error(str(e))
 
-        # TODO PIN
+        # TODO PIN!
 
 
         if error:
+            log_error("IPFS error hit")
             breakpoint()
             self.add()
         else:

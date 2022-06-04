@@ -83,10 +83,15 @@ class Wallet:
         return
 
 
-    def update_utxos(self):
+    def update_utxos(self, msg:str=''):
         # query utxo
         cmd = "cardano-cli query utxo --address " + self.addr + " " + self.network
         res = cmd_out(cmd)
+
+        if "Network.Socket.connect" in str(res):
+            log_error(f"Network socket lost waiting a minute... {msg}")
+            time.sleep(60)
+            return self.update_utxos(msg)
         # remove header from utxo cmd output, convert to array of lines
         utxos = res.strip().splitlines()
         utxos = utxos[2:]
@@ -163,7 +168,7 @@ class Wallet:
     def find_txs_containing_lace_amount(self, lace):
         lace = int(lace)
         txHashIdList = []
-        utxos = self.update_utxos()
+        utxos = self.update_utxos(f"while looking for lace {lace}")
         for utxo in utxos:
             tx_hash, tx_id, tx_lace, _ = utxo
             if tx_lace == lace:
@@ -173,3 +178,20 @@ class Wallet:
                 txHashIdList.append( (tx_hash, tx_id) )
         return txHashIdList
 
+    def find_txs_ignoring_lace(self, lace):
+        lace = int(lace)
+        txHashIdList = []
+        utxos = self.update_utxos(f"while looking for lace {lace}")
+        for utxo in utxos:
+            tx_hash, tx_id, tx_lace, _ = utxo
+            if tx_lace != lace:
+                txHashIdList.append( (tx_hash, tx_id) )
+        return txHashIdList
+
+
+    def socket_healthy(self):
+        cmd = "cardano-cli query utxo --address " + self.addr + " " + self.network
+        res = cmd_out(cmd)
+        if "Network.Socket.connect" in str(res):
+            return False
+        return True

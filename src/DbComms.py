@@ -37,7 +37,7 @@ class DbComms:
         if dbName == '':
             raise Exception("Missing db name parameter")
         self.dbName = "test_" + dbName # TODO note test
-        self.maxMint = maxMint
+        self.maxMint = int(maxMint)
         # get password
         load_dotenv()
         self.password = os.getenv('DB_PASSWORD')
@@ -199,7 +199,8 @@ class DbComms:
         other += "hasPayload VARCHAR(20), "
         other += "meta BLOB, "
         other += "svg MEDIUMBLOB, "
-        other += "date VARCHAR(255)"
+        other += "date VARCHAR(255), "
+        other += "ipfsHash VARCHAR(255)"
         return self.create_table(tableName=tableName, other=other)
     
     def populate_status(self):
@@ -212,7 +213,7 @@ class DbComms:
                 int_to_hex_id(i),
                 int(i),
                 STATUS_AVAILABLE,
-                self.adaPrice
+                str(self.adaPrice)
             ))
         try:
             self.db_cursor.executemany(sql, values)
@@ -267,7 +268,7 @@ class DbComms:
         return nftStatusJson
 
     #d.update("status", "status='cake'", "hexId='0000'")
-    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath, hasPayload):
+    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath, hasPayload, ipfsHash):
         updates = "nftName='" + nftName + "', "
         if hasPayload != None:
             updates += "hasPayload='true', "
@@ -275,6 +276,7 @@ class DbComms:
             updates += "hasPayload='false', "
 
         updates += "metaFilePath='" + metaFilePath + "', "
+        updates += "ipfsHash='" + ipfsHash + "', "
         updates += "svgFilePath='" + svgFilePath + "'"
 
         where = "hexId='" + hexId + "'"
