@@ -6,17 +6,23 @@ from flask_cors import CORS
 import urllib.parse
 from ApiManager import *
 from BlockFrostTools import BlockFrostTools
+from dotenv import load_dotenv
+
 # flask config ---------------------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 #app.config["SERVER_NAME"] = "127.0.0.1:5225" # TODO set this to ip + port
-# vars -----------------------------------------------------------------------
-mint_wallet = Wallet()
-price = 5
-max_mint = 124
-project = "3000"
 
-apiManager = ApiManager(mint_wallet=mint_wallet, project=project, nft_price_ada=price, max_mint=max_mint)
+# vars -----------------------------------------------------------------------
+mintWallet = Wallet()
+load_dotenv()
+price       = os.getenv('PRICE')
+project     = str(os.getenv('PROJECT'))
+maxMint     = os.getenv('MAX_MINT')
+newPolicy   = False
+network     = TESTNET # NOTE CHANGE ON PRODUCTION
+
+apiManager = ApiManager(network=network, mint_wallet=mintWallet, project=project, nft_price_ada=price, max_mint=maxMint)
 t = BlockFrostTools()
 # ----------------------------------------------------------------------------
 
