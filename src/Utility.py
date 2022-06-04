@@ -85,9 +85,9 @@ def cmd_out(cmd):
     p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
     res =  p.stdout.read()
     # if error raise exception
-    error_str = "Error"
-    if error_str in str(res):
-        log_error("Error" + str(res))
+    #error_str = "Error"
+    #if error_str in str(res):
+    #    log_error("Error" + str(res))
     return res
 
 # formating ------------------------------------------------------------------
@@ -110,10 +110,10 @@ def replace_b_str(msg):
 
 # Cardano conversions --------------------------------------------------------
 def ada_to_lace(x:float):
-    return x * 1000000
+    return float(x) * 1000000
 
 def lace_to_ada(x:float):
-    return x / 1000000
+    return float(x) / 1000000
 
 # MISC -----------------------------------------------------------------------
 def int_to_hex_id(x:int):

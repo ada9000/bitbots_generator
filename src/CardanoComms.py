@@ -20,14 +20,15 @@ from datetime import datetime
 
 # ----------------------------------------------------------------------------
 class CardanoComms:
-    def __init__(self, network:str=TESTNET, new_policy:bool=False, project:str=''):
+    def __init__(self, network:str=TESTNET, new_policy:bool=False, project:str=None):
         
         # if the project is not-defined set it to the current date
-        if project == '':
+        if not project:
+            log_info("Creating new project")
             new_policy = True
             project = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        # define policy directory       
+        # define policy directory
         self.project_dir = PROJECT_DIR + project
 
         # create project dir if missing
@@ -35,6 +36,7 @@ class CardanoComms:
             os.mkdir(PROJECT_DIR)
         # check for the project, if it doesn't exists create a new policy for it
         if not os.path.isdir(self.project_dir):
+            log_info("New project...")
             os.mkdir(self.project_dir)
             new_policy = True
 
@@ -259,6 +261,7 @@ class CardanoComms:
 
 
     def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, nft_name, tx_hash, tx_id, price):
+        utf8Name = nft_name
         # convert utf-8, nft name to base16
         nft_name = nft_name.encode("utf-8")
         nft_name = base64.b16encode(nft_name)
@@ -278,7 +281,7 @@ class CardanoComms:
             nft_name=nft_name,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path,
-            txhash=tx_hash,
+            tx_hash=tx_hash,
             txid=tx_id)
         witness = "1"
         cmd = "cardano-cli transaction calculate-min-fee"+\
@@ -291,7 +294,7 @@ class CardanoComms:
         fee = cmd_out(cmd)
         fee = str(fee).replace('b\'','').replace('\\n\'','')
         # get funds
-        mint_wallet.update_utxos() # TODO what happens if it keeps updating due to incomiing payments
+        mint_wallet.update_utxos(f"while attempting mint for '{tx_hash}'") # TODO what happens if it keeps updating due to incomiing payments
         #funds = mint_wallet.lace
         funds = price # TODO funds are the price of tx
         # calculate change
@@ -319,13 +322,13 @@ class CardanoComms:
             nft_name=nft_name,
             min_mint_cost=min_mint_cost,
             metadata_path=metadata_path,
-            txhash=tx_hash,
+            tx_hash=tx_hash,
             txid=tx_id)
         #sign
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
         # send
-        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=nft_name)
+        return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=utf8Name)
 
 
     # TODO DEPRECATE OR IGNORE
@@ -389,7 +392,7 @@ class CardanoComms:
         return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=nft_id)
 
 
-    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_name, min_mint_cost, metadata_path, txhash=None, txid=None):
+    def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_name, min_mint_cost, metadata_path, tx_hash=None, txid=None):
         """ builds a nft transaction """
         # set  TODO TODO TODO TODO ere
 
@@ -403,17 +406,9 @@ class CardanoComms:
         min_mint_cost = str(min_mint_cost)
         # get usable transactions
         tx_in = ""
-        for tx_id, tx_hash, _, contains_nft in mint_wallet.txs:
-            if contains_nft == False:
-                # replace any 
-                #tx_id = tx_id.replace(' ','')
-                #tx_hash = tx_hash.replace(' ','')
-                tx_in += " --tx-in " + tx_id + "#" + tx_hash
-                # TODO DO NOT USE ALL TXS, ONLY CONSUME SENDERS TX
-        if tx_hash != None:
-            #log_debug("spending tx from sender")
-            tx_in = " --tx-in " + str(txhash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
-            #log_error(tx_in)
+        
+        if tx_hash != None: 
+            tx_in = " --tx-in " + str(tx_hash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
 
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + change
@@ -442,6 +437,7 @@ class CardanoComms:
 
 
     def sign_mint_tx(self, wallet:Wallet):
+        print("attempting sign")
         sign_tx = "cardano-cli transaction sign" + \
             " --signing-key-file " + wallet.skey + \
             " --signing-key-file " + self.policy_skey +\
@@ -463,17 +459,23 @@ class CardanoComms:
         res = cmd_out(cmd)
         res = replace_b_str(res)
         res = res.replace('\n','')
+
+        if 'Transaction successfully submitted' in res:
+            log_info(f"Successfully submitted '{nftName}' to '{recv_addr}'")
+            return True
+
         if 'BadImputsUTxO' in res:
-            log_error("BadImputsUTxO")
-            return False
-        if 'ValueNotConservedUTxO' in res:
-            log_error("ValueNotConservedUTxO")
-            return False
-        if 'OutputTooSmallUTxO' in res:
-            log_error("OutputTooSmallUTxO - Ensure price is greater than ~5 ADA")
-            return False
-        if 'Error' in res:
-            log_error("something went wrong (socket?)")
-            return False
-        log_debug("Submitted to Cardano blockchain successfully")
-        return True
+            errMsg = "BadImputsUTxO"
+        elif 'ValueNotConservedUTxO' in res:
+            errMsg = "ValueNotConservedUTxO"
+        elif 'OutputTooSmallUTxO' in res:
+            errMsg = "OutputTooSmallUTxO - Ensure price is greater than ~5 ADA"
+        elif "Network.Socket.connect" in res:
+            errMsg = "Network socket lost waiting a minute..."
+        elif 'Error' in res:
+            errMsg = "something went wrong (socket?)"
+        else:
+            errMsg = res
+
+        log_error(f"Issue with minting nft '{nftName}' to '{recv_addr}' error is '{errMsg}' ")
+        return False
