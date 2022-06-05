@@ -18,6 +18,7 @@ from Utility import *
 # consts ---------------------------------------------------------------------
 # files
 INPUT_DIR = "../input-mainnet/"
+
 #------------------------------------------------------------------------------
 # XML and SVG consts
 XML_tag = '<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">'
@@ -29,16 +30,6 @@ BASE_COLOUR_REPLACE = 'class="base_colour"'
 COLOUR_STYLE_START = '<style> .base_colour {fill:'
 COLOR_STYLE_DEFAULT = '{fill: #DBD4FF}' # TODO deprecated?
 COLOUR_STYLE_END = '} </style>'
-# animated background consts
-# anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
-# ANIM_START = '<g id="bg"><g id="solid" transform="matrix(0.901267,0,0,0.970583,437.114,88.3231)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:'
-# ANIM_DARK  = '#393939;"/></g></g>'
-# ANIM_MID = '"><animate id="bgAnimation" attributeName="fill" values="'
-# ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path></g><g id="colour45" transform="matrix(0.637292,0.637292,-0.686306,0.686306,3199.63,-851.632)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear1);"/></g><g id="colour451" serif:id="colour45" transform="matrix(0.637292,-0.637292,0.686306,0.686306,-851.632,2706.37)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear2);"/></g><g id="shadow" transform="matrix(-0.901267,2.22045e-16,-1.66533e-16,-0.970583,5468.89,5817.68)"><path d="M6068,2951.5C6068,1272.3 4599.85,-91 2791.5,-91C983.15,-91 -485,1272.3 -485,2951.5C-485,4630.7 983.15,5994 2791.5,5994C4599.85,5994 6068,4630.7 6068,2951.5Z" style="fill:url(#_Linear3);"/></g></g><defs><linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-# ANIM_GRADE_MID = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:'
-# ANIM_END = 'stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(6553,0,0,6085,-485,2951.5)"><stop offset="0" style="stop-color:white;stop-opacity:0"/><stop offset="1" style="stop-color:black;stop-opacity:0.31"/></linearGradient></defs>'
-
-#DARK_BG_COLOUR = "#393939;"
 DARK_BG_COLOUR = "#141414;"
 
 ANIM_START = '<g id="bg"><path id="solid" d="M5906,295.3C5906,132.319 5773.68,-0 5610.7,-0L295.3,-0C132.319,-0 0,132.319 0,295.3L0,5610.7C0,5773.68 132.319,5906 295.3,5906L5610.7,5906C5773.68,5906 5906,5773.68 5906,5610.7L5906,295.3Z" style="fill:'
@@ -49,28 +40,14 @@ ANIM_GRADE_1 = '" dur="10s" repeatCount="indefinite" /></path> <path id="hue_b" 
 ANIM_GRADE_MID = 'stop-opacity:0.3"/><stop offset="1" style="stop-color:white;stop-opacity:0.2"/></linearGradient><linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-5906,-5906,5906,-5906,5906,5906)"><stop offset="0" style="stop-color:'
 # colour here
 ANIM_END = 'stop-opacity:0.3"/><stop offset="1" style="stop-color:white;stop-opacity:0.2"/></linearGradient></defs>'
-
-# unquie
-MISSING_404_ID = '0001'
-#MISSING_404_ID = '0404'
-
-#-----------------------------------------------------------------------------
-DEFAULT_WEIGHT = 1.0
 MINT_MAX = 8192
+
+# unique
+MISSING_404_ID = ['0404','0000', '1404']
+
+DEFAULT_WEIGHT = 100
 MAX_PAYLOAD_BYTES = 14000
 #-----------------------------------------------------------------------------
-# TODO remove
-#INPUT_DIR = "../input-testnet/" # TODO
-#MINT_MAX = 60
-#-----------------------------------------------------------------------------
-# TODO
-# [ ] rename meta items (remove underscore etc)
-# [ ] no_<attribute> is renamed to none in metadata
-# [ ] ensure only 503 are lobsters (and these are giveaways) https://cardanoscan.io/tokenPolicy/cc7888851f0f5aa64c136e0c8fb251e9702f3f6c9efcf3a60a54f419
-# [ ] NFT n that holds the colour payload will be PURE nft of said colour
-# [ ] Add secretes into svg?
-# [ ] Remove COPY_RIGHT comments
-# [ ] change input dir before realise
 
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
@@ -89,6 +66,7 @@ class Bitbots:
         self.variable_attributes = ["bg_effects", "colour", "bg_colour", "special", "hats", "ears", "mouths", "eyes"] #
 
         self.requiresDarkAndStarsBg = ['moon', 'red_planet', 'gas_giant']
+        self.requiresStars = ['Mount_Matter', 'two_suns', 'stars']
 
         self.colours = [
             "#dbd4ff",
@@ -131,14 +109,6 @@ class Bitbots:
             "#d194a8;"
         ]
 
-        self.moonPhases = ['🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌚']
-        self.luckyFruit = ['🍒','🍓','🍊','🍎','🍈']
-        self.faction = ['Unknown','Interstellar Elves','AGI']
-        self.programming = ['Biological','9000','Loonix','Custom','Glorified Toaster']
-
-        #self.metaPhysics = ['Interstellar', 'Voxel', 'Simulated', 'IRL', 'Based']
-
-
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
         self.ref_order = ['startcolour','colour','endcolour', 'bg_colour', 'anim_mid', 'bg_array', 'anim_grade_1', 'grade1_colour', 'anim_grade_mid', 'grade2_colour', 'anim_end','anim_dark','neck','head_shadow','special','head','hats','ears','mouths','eyes'] # 
         # meta data       
@@ -169,6 +139,7 @@ class Bitbots:
         self.attributes_meta_file   = self.project_dir + "_nft-attributes-meta.json"
         self.nft_weights_file       = self.project_dir + "_nft-weights.json"
         self.nft_payload_file       = self.project_dir + "_nft-payload.json"
+        self.nft_rarity_file        = self.project_dir + "_nft-rarity.json"
        
         # save all meta and svg to disk
         self.nft_meta_dir         = self.project_dir + "meta/"
@@ -215,7 +186,7 @@ class Bitbots:
     # Input to metadata ------------------------------------------------------
     def nft_meta_inner(self, attribute:str, id_num:int, data:str):
         """ defines the inner metadata for each trait """
-        return {'attribute':attribute, 'id':id_num, 'weight':1.0, 'max':self.max_mint, 'data':data, 'current':0}
+        return {'attribute':attribute, 'id':id_num, 'weight':DEFAULT_WEIGHT, 'max':self.max_mint, 'data':data, 'current':0, 'percentage':0}
 
 
     def nft_meta_from_files(self):
@@ -233,7 +204,10 @@ class Bitbots:
             # if the dirname is variable add none type 
             if attribute in self.variable_attributes:
                 # TODO add none type
-                trait = "no_" + attribute
+                if attribute == "hats":
+                    trait = "Default"
+                else:
+                    trait = "no_" + attribute
                 self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, data)
                 id_num += 1
                 traits.append(trait)
@@ -273,8 +247,8 @@ class Bitbots:
 
 
         # save to file 
-        write_json(self.traits_meta_file, self.nft_traits)
-        write_json(self.attributes_meta_file, self.nft_attributes)
+        pretty_write_json(self.traits_meta_file, self.nft_traits)
+        pretty_write_json(self.attributes_meta_file, self.nft_attributes)
 
 
     def clean_svg(self, data):
@@ -360,7 +334,7 @@ class Bitbots:
                 self.nft_traits[trait]["max"] = weights[trait]["max"]
         
         # save weights in a json file (user can edit them)
-        write_json(self.nft_weights_file, weights)
+        pretty_write_json(self.nft_weights_file, weights)
 
     # payloads ---------------------------------------------------------------
     def find_payload_refs(self, payload_trait):
@@ -381,6 +355,7 @@ class Bitbots:
         refs += self.find_payload_refs(properties['colour']) # TODO HERE
         refs += self.find_payload_refs('endcolour')
         
+        refs += self.find_payload_refs('about')
         # animated background ------------------------------------------------
         # anim_start, bg_colour, anim_mid, bg_array, anim_grade_1, grade1_colour, anim_grade_mid, grade2_colour, anim_end
 
@@ -434,8 +409,10 @@ class Bitbots:
         # end animated background --------------------------------------------
 
         # backgrounds effects
-
-        if properties['bg_effects'] in self.requiresDarkAndStarsBg:
+        if properties['bg_effects'] in self.requiresStars:
+            refs += self.find_payload_refs('shooting_stars_extra')
+            refs += self.find_payload_refs(properties['bg_effects'])
+        elif properties['bg_effects'] in self.requiresDarkAndStarsBg:
             refs += self.find_payload_refs('shooting_stars')
             refs += self.find_payload_refs(properties['bg_effects']) 
         else:
@@ -443,8 +420,13 @@ class Bitbots:
 
         # neck
         refs += self.find_payload_refs('neck')
+
+        # requires mark on neck?
+        if random.random() < 0.01:
+            log_debug("Mark of Pixel added")
+            refs += self.find_payload_refs('mark_of_pixel')
+
         # add id
-        
         # id tag -------------------------------------------------------------
         refs += self.find_payload_refs('id_start')
         for i, x in enumerate(nft_id):
@@ -464,7 +446,7 @@ class Bitbots:
 
         
         # unique nfts here
-        if nft_id == MISSING_404_ID or properties['special'] == 'headless': # TODO implement or remove headless?
+        if nft_id in MISSING_404_ID or properties['special'] == 'headless': # TODO implement or remove headless?
             refs += self.find_payload_refs('end')
             return refs
 
@@ -605,6 +587,21 @@ class Bitbots:
         self.payload_index = 0
         self.last_payload_size = 0
         
+        # start message
+        about = f"""<!--
+        Bitbots
+        
+        Created by Cardano stake pool:
+            4f3410f074e7363091a1cc1c21b128ae423d1cce897bd19478e534bb
+
+        Build specification:
+            Inside each 721 metadatum there is a 'references' tag.
+            Inside some 721 metadatum a 'payload' tag can be found.
+            Given all transactions for this policy ({self.policy}) you can find all payloads.
+            Given all payloads you can rebuild any NFT by concatenating the related payloads in sequential order.
+        -->"""
+        self.append_to_payload(about, "about")
+
         # SVG start until color
         payload_str = ""
         payload_str += SVG_start
@@ -647,7 +644,7 @@ class Bitbots:
         # add the rest
 
 
-        order = ["bg_effects","neck","id","special","head_shadow","head","hats", "ears", "mouths", "eyes"]
+        order = ["bg_effects","neck","id","special","silent","head_shadow","head","hats", "ears", "mouths", "eyes"] # TODO? order matters here? I don't think so
         known_traits = []
         for o in order:
             # Add each trait to payload, you can reference it with payload_meta
@@ -660,9 +657,13 @@ class Bitbots:
                 self.append_to_payload(self.nft_traits[x]["data"], x)
         # apppend end
         self.append_to_payload(SVG_end, 'end')
+
+        truth = f"<!-- The cake is a lie -->"
+        self.append_to_payload(truth, "0SumTruth")
+
         # save data
         data = {"meta":self.payload_meta, "payload":self.payload_data}
-        write_json(self.nft_payload_file, data)
+        pretty_write_json(self.nft_payload_file, data)
         
 
     # ALL THIS MIGRATE TO API MANAGER ----------------------------------------------------------------------------------------------------
@@ -695,7 +696,7 @@ class Bitbots:
         if tx_hash != None:
             status[idx]['tx_hash'] = tx_hash
         
-        write_json(self.nft_status_file, status)
+        pretty_write_json(self.nft_status_file, status)
     
     def find_status(self, status_to_find):
         # TODO REPLACE WITH DB
@@ -789,10 +790,9 @@ class Bitbots:
 
         used_hashes = []
 
-        testONLY = 0
+        nftRarityTest = {}
 
         # loop while there are still payloads to be added or nfts left to mint
-        breakpoint()
         for i in range(int(self.max_mint)):
             # check current idx
             n = Nft(policyid=self.policy)
@@ -820,6 +820,8 @@ class Bitbots:
                 if attribute == 'uid':
                     continue
                 self.nft_traits[trait]['current'] += 1
+                self.nft_traits[trait]['percentage'] = int(self.nft_traits[trait]['current']) / int(self.max_mint)
+
 
 
             # apply refs
@@ -831,7 +833,7 @@ class Bitbots:
             properties = self.clean_props(properties)
 
             # alter properties tags here
-            if nft_idx == MISSING_404_ID or properties['special'] == 'headless':
+            if nft_idx in MISSING_404_ID or properties['special'] == 'headless':
                 ignoreKeys = ['bg effects', 'colour', 'bg colour']
                 for key, value in properties.items():
                     if key in ignoreKeys:
@@ -839,7 +841,7 @@ class Bitbots:
                     else:
                         properties[key] = 'none'
                 properties['special'] = 'headless'
-                breakpoint()
+                breakpoint() # TODO? is this reached?
 
             # payload
             nft_payload = None
@@ -852,13 +854,17 @@ class Bitbots:
                     nft_payload = self.payload_data[str(current_payload_idx)]
                 last_nft_with_payload = mint_idx
 
+            # trait rarity
+            nftRarityTest[nft_idx] = properties
 
             # write svg ----------------------------------------------------------
             svg_file_path = self.nft_svg_dir + nft_idx + ".svg"
             self.nft_to_svg(path=svg_file_path, refs=refs)
 
             # get ipfs hash from block frost
-            ipfs_hash = self.ipfs.add(svg_file_path)
+            # TODO
+            #ipfs_hash = self.ipfs.add(svg_file_path)
+            ipfs_hash = "TODO turn on and pin"
 
             # create the nft meta with the payload index
             nft_meta = n.generate_nft(
@@ -934,7 +940,6 @@ class Bitbots:
             log_error("Not all payloads have been added!")
             input("Press any key to continue\n> ")
 
-        log_debug("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
 
         log_debug("UID -------")
         for attribute in self.variable_attributes:
@@ -943,4 +948,16 @@ class Bitbots:
 
         # return the nft idx of the last nft with a payload
         self.db.setAllGenerated()
+
+        self.rarity(nftRarityTest)
+
+        log_info("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
         return last_nft_with_payload 
+    
+    def rarity(self, nfts):
+        rarity = {}
+        log_debug("Calculating trait rarity")
+        for x in self.nft_traits:
+            if self.nft_traits[x]['percentage'] != 0:
+                rarity[x] = self.nft_traits[x]['percentage']
+        pretty_write_json(self.nft_rarity_file, rarity)

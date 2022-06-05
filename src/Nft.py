@@ -4,10 +4,8 @@ import copy
 
 ATTRIBUTE_FIXES = {
     "bg effects":"Effects",
-    "colour":"Base colour",
-    "bg colour":"Background colour",
     "bg effects":"Background",
-    "hats":"Hat",
+    "hats":"Head",
     "mouths":"Mouth",
     }
 
@@ -18,8 +16,16 @@ TRAIT_FIXES = {
     "#2897e0":"Diamond",
     "#FF0063;":"Hot Pink",  # cool bg colour
     "#3E51FF;":"Deep Blue", # cool bg colour
+    "stars":"Space 0x00",
+    "shooting stars":"Space 0x01",
+    "Mount Matter":"Mount Matter",
+    "laser":"LASER",
     }
 
+#MOON_PHASES = ['🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌚'] 
+#LUCKY_FRUIT = ['🍒','🍓','🍊','🍎','🍈']
+#FACTION     = ['[classified]','Interstellar Elves','AGI', 'Rubber Ducks']
+#PROGRAMMING = ['Biological','9000 IF STATEMENTS','Custom compiler','Glorified toaster (Mechanical)', 'Assembly']
 
 class Nft:
     def __init__(self, policyid:str=None):
@@ -41,7 +47,7 @@ class Nft:
             fixedAttribute = attribute.capitalize()
             fixedTrait = trait.capitalize()
             
-            # make any colours uppercase
+            # make any colours uppercase TODO deprecate as we now remove colours
             if "colour" in attribute:
                 fixedTrait = trait.upper()
                 fixedTrait = fixedTrait.replace(';','')
@@ -52,11 +58,10 @@ class Nft:
             if trait in TRAIT_FIXES.keys():
                 fixedTrait = TRAIT_FIXES[trait]
 
-            fixedProperties[fixedAttribute] = fixedTrait
+            # remove any colours for more interesting stats
+            if "colour" not in fixedAttribute.lower():
+                fixedProperties[fixedAttribute] = fixedTrait
 
-            # TODO
-            # remove colours????
-            # this would make it more fun for statistics
 
         return fixedProperties
 
@@ -115,7 +120,6 @@ class Nft:
 
     def append_more_data(self, meta, payload_ref:int, nft_payload:list):
         new_meta = copy.deepcopy(meta)
-        #new_meta[self.new_CIP][self.policyid][payload_ref] = nft_payload
         new_meta['721'][self.payload][payload_ref] = nft_payload
         return new_meta
 

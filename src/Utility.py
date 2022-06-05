@@ -61,11 +61,15 @@ def read_file_return_data(filepath):
     with open(filepath) as f:
         data = json.load(f)
     return data
- 
+
+def pretty_write_json(filepath, data):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    return
+
 def write_json(filepath, data):
     #TODO put mutex here?
     with open(filepath, 'w', encoding='utf-8') as f:
-        #json.dump(data, f, ensure_ascii=False, indent=4)
         json.dump(data, f, ensure_ascii=False, indent=None)
     return
 
