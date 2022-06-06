@@ -61,6 +61,9 @@ transform="translate(220,0)"
 [] Test killing app half way through
 [] Add logs to db for minting
 
+# launch checklist
+Ensure there are no duplicate nfts by running
+```SELECT uid FROM nft_status GROUP BY uid HAVING COUNT(uid) > 1```
 
 # Setup sql
 Setup mysql
