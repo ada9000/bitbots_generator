@@ -27,6 +27,8 @@ TRAIT_FIXES = {
 #FACTION     = ['[classified]','Interstellar Elves','AGI', 'Rubber Ducks']
 #PROGRAMMING = ['Biological','9000 IF STATEMENTS','Custom compiler','Glorified toaster (Mechanical)', 'Assembly']
 
+PROJECT_NAME = "bit_bots"
+
 class Nft:
     def __init__(self, policyid:str=None):
         
@@ -81,8 +83,9 @@ class Nft:
         # notice the new CIP line
         # TODO convert this to variables passed into method
         nft_details = {
-            'project':'Bitbots',
+            'project':PROJECT_NAME,
             'name':nft_name,
+            'mediaType':'image/svg',
             'image':f"ipfs://{ipfs_hash}",
             'Unique identification':uid,
             'traits':properties,
@@ -130,3 +133,13 @@ class Nft:
         new_meta = copy.deepcopy(meta)
         new_meta[self.nft_CIP][self.policyid][self.nft_name]['type'] = type
         return new_meta
+
+    def nft_minimal_details(self, nft_name:str, nft_references:list, properties, uid):
+        # apply custom defined fixes to metadata... before saved ready for minting
+        properties = self.fixProperties(properties)
+        nft_details = {
+            'name':nft_name,
+            'Unique identification':uid,
+            'traits':properties,
+            }
+        return nft_details

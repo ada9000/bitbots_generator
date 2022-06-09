@@ -10,11 +10,12 @@ import random
 import re
 import sys
 import shutil
-from DbComms import NFT_STATUS_TABLE, DbComms
+from DbComms import NFT_STATUS_TABLE, STATUS_AIRDROP, DbComms
 from Ipfs import IpfsManager
 # local files
 from Nft import *
 from Utility import *
+from dotenv import load_dotenv
 # consts ---------------------------------------------------------------------
 # files
 INPUT_DIR = "../input-mainnet/"
@@ -58,6 +59,12 @@ class Bitbots:
         if policy == None:
             raise Exception("No policy defined")
         
+        load_dotenv()
+        self.airdrop = os.getenv('AIRDROP')
+        if self.airdrop == None:
+            raise Exception("Missing airdrop in .env")
+
+
         # parameters
         self.max_mint = max_mint
         self.max_payload_bytes = max_payload_bytes
@@ -503,7 +510,6 @@ class Bitbots:
             fullUUID += str(hex(self.nft_traits[trait]["id"])[2:]).zfill(2).upper()
 
         properties['uid'] = fullUUID # save unquie id for metadata
-        #breakpoint()
         return uuidHexHash, properties
 
 
@@ -589,7 +595,7 @@ class Bitbots:
         
         # start message
         about = f"""<!--
-        Bitbots
+        bit_bots
         
         Created by Cardano stake pool:
             4f3410f074e7363091a1cc1c21b128ae423d1cce897bd19478e534bb
@@ -814,6 +820,7 @@ class Bitbots:
                 uuidHexHash, properties = self.gen_random_props()  
             
             used_hashes.append(uuidHexHash)
+            uid = properties['uid']
 
             for attribute in properties:
                 trait = properties[attribute]
@@ -825,7 +832,7 @@ class Bitbots:
 
 
             # apply refs
-            nft_name = 'Bitbot 0x' + nft_idx
+            nft_name = 'bit_bot 0x' + nft_idx # TODO note name
 
             refs = self.find_refs_for_props(properties, nft_idx)
             
@@ -841,7 +848,6 @@ class Bitbots:
                     else:
                         properties[key] = 'none'
                 properties['special'] = 'headless'
-                breakpoint() # TODO? is this reached?
 
             # payload
             nft_payload = None
@@ -863,8 +869,8 @@ class Bitbots:
 
             # get ipfs hash from block frost
             # TODO
-            #ipfs_hash = self.ipfs.add(svg_file_path)
-            ipfs_hash = "TODO turn on and pin"
+            ipfs_hash = self.ipfs.add(svg_file_path)
+            #ipfs_hash = "TODO turn on and pin"
 
             # create the nft meta with the payload index
             nft_meta = n.generate_nft(
@@ -921,32 +927,49 @@ class Bitbots:
             if s > MAX_CARDANO_META:
                 raise Exception("File \'" + meta_file_path + "\' has a size of " + str(s) + " larger than defined max \'" + str(MAX_CARDANO_META) + "\'")
 
+            # ADD THEST TO DB TOOOOO
+            # clean nft meta TODO?
+            minimalMeta = n.nft_minimal_details(
+                nft_name=nft_name,
+                nft_references=refs, 
+                properties=properties,
+                uid=uid,
+                )
+
             # update the database to include the nft details (could be more efficient, not required though)
-            self.db.nft_update(hexId=nft_idx, nftName=nft_name, metaFilePath=meta_file_path, svgFilePath=svg_file_path, hasPayload=nft_payload, ipfsHash=ipfs_hash)
+            self.db.nft_update(
+                hexId=nft_idx, 
+                nftName=nft_name, 
+                metaFilePath=meta_file_path, 
+                svgFilePath=svg_file_path, 
+                hasPayload=nft_payload, 
+                ipfsHash=ipfs_hash,
+                uid=uid,
+                minimalMeta=minimalMeta,
+                )
+
+            if int(nft_idx, 16) <= int(self.airdrop): # TODO
+                self.db.setStatus(nft_idx, STATUS_AIRDROP)
             
             # nft created
             self.db.select("*", NFT_STATUS_TABLE ,"hexId='"+nft_idx+"'")
             log_info("Created " + nft_name)
             mint_idx += 1
 
-            # if there are still nfts to be minted keep looping
-            ##if mint_idx > int(self.max_mint):
-            ##    nftsLeftToMint = False
             # if there are still payloads to be added keep looping
             if current_payload_idx > len(self.payload_data) - 1:
                 payloadsNeedAdding = False
 
+
         if payloadsNeedAdding:
             log_error("Not all payloads have been added!")
             input("Press any key to continue\n> ")
-
 
         log_debug("UID -------")
         for attribute in self.variable_attributes:
             log_debug(attribute)
         log_debug("END UID ----")
 
-        # return the nft idx of the last nft with a payload
         self.db.setAllGenerated()
 
         self.rarity(nftRarityTest)
@@ -959,5 +982,8 @@ class Bitbots:
         log_debug("Calculating trait rarity")
         for x in self.nft_traits:
             if self.nft_traits[x]['percentage'] != 0:
-                rarity[x] = self.nft_traits[x]['percentage']
+                a = self.nft_traits[x]['attribute']
+                p = self.nft_traits[x]['percentage']
+                c = self.nft_traits[x]['current']
+                rarity[x] = {"a":a, "%":p, "c":c}
         pretty_write_json(self.nft_rarity_file, rarity)

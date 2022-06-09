@@ -18,9 +18,10 @@ STATUS_AVAILABLE            = "available"
 STATUS_AWAITING_MINT        = "awaiting-mint"
 STATUS_IN_PROGRESS          = "minting" # this state is required in case of hard failure, in which something may or maynot have minted
 STATUS_SOLD                 = "sold"
+STATUS_AIRDROP              = "airdrop"
 
 # status list to validate correct status is being used
-STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD]
+STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD, STATUS_AIRDROP]
 
 NFT_STATUS_TABLE = "nft_status"
 NFT_STATE_TABLE = "state"
@@ -200,7 +201,9 @@ class DbComms:
         other += "meta BLOB, "
         other += "svg MEDIUMBLOB, "
         other += "date VARCHAR(255), "
-        other += "ipfsHash VARCHAR(255)"
+        other += "ipfsHash VARCHAR(255), "
+        other += "uid VARCHAR(255), "
+        other += "minimalMeta VARCHAR(10000) "
         return self.create_table(tableName=tableName, other=other)
     
     def populate_status(self):
@@ -229,10 +232,10 @@ class DbComms:
     def getNftPagination(self, index):
         where = "intId >= " + str(index) + " LIMIT 32"
         #res = self.select("hexId, intId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE, where)
-        res = self.select("hexId, intId, nftName, status, hasPayload, meta, svg", NFT_STATUS_TABLE, where)
+        res = self.select("hexId, intId, nftName, status, hasPayload, minimalMeta, svg, ipfsHash", NFT_STATUS_TABLE, where)
         paginationJson = {}
 
-        for hexId, intId, nftName, status, hasPayload, meta, svg in res:
+        for hexId, intId, nftName, status, hasPayload, meta, svg, ipfsHash in res:
             meta = json.loads(meta) # TODO convert to null if status 
             #paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
             svg = svg.decode('utf-8')
@@ -267,8 +270,15 @@ class DbComms:
 
         return nftStatusJson
 
+    def getMinimalNftWithIpfs(self, hexId):
+        # get all nfts 
+        where = "hexId='" + hexId + "'"
+        ipfs, meta = self.select("ipfsHash, minimalMeta", NFT_STATUS_TABLE, where)[0]
+        meta = json.loads(meta)
+        return ipfs, meta
+
     #d.update("status", "status='cake'", "hexId='0000'")
-    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath, hasPayload, ipfsHash):
+    def nft_update(self, hexId, nftName, metaFilePath, svgFilePath, hasPayload, ipfsHash, uid, minimalMeta):
         updates = "nftName='" + nftName + "', "
         if hasPayload != None:
             updates += "hasPayload='true', "
@@ -277,12 +287,14 @@ class DbComms:
 
         updates += "metaFilePath='" + metaFilePath + "', "
         updates += "ipfsHash='" + ipfsHash + "', "
+        updates += "uid='" + uid + "', "
+        updates += "minimalMeta='" + json.dumps(minimalMeta) + "', "
         updates += "svgFilePath='" + svgFilePath + "'"
 
         where = "hexId='" + hexId + "'"
         self.update(NFT_STATUS_TABLE, updates, where)
 
-        # HERE
+        # add files to db
         self.updateBlob(hexId, "meta", metaFilePath)
         self.updateBlob(hexId, "svg", svgFilePath)
     
@@ -412,33 +424,18 @@ class DbComms:
     
     # get all nfts that have a customer assigned
     # TODO no checks to check if addr is valid
-    def getAwaitingMint(self):
+    def getAllWithStatus(self, status):
         pass
         DB_STATUS_MUTEX.acquire()
         try:
             # get all nfts 
-            where = "status='" + STATUS_AWAITING_MINT + "'"
-            awaitingMint = self.select("hexId, customerAddr, nftName, txHash, txId, metaFilePath", NFT_STATUS_TABLE, where)
-            if awaitingMint:
-                return awaitingMint
+            where = "status='" + status + "'"
+            res = self.select("hexId, customerAddr, nftName, txHash, txId, metaFilePath", NFT_STATUS_TABLE, where)
+            if res:
+                return res
             return None
         finally:
             DB_STATUS_MUTEX.release()
-
-    # TODO only used to mint from failure
-    def getAllInProgress(self):
-        pass
-        DB_STATUS_MUTEX.acquire()
-        try:
-            # get all nfts 
-            where = "status='" + STATUS_IN_PROGRESS + "'"
-            awaitingMint = self.select("hexId, customerAddr, nftName, txHash, txId, metaFilePath", NFT_STATUS_TABLE, where)
-            if awaitingMint:
-                return awaitingMint
-            return None
-        finally:
-            DB_STATUS_MUTEX.release()
-
 
     def setStatus(self, hexId, status):
         DB_STATUS_MUTEX.acquire()

@@ -62,7 +62,7 @@ class CardanoComms:
             self.gen_policy()
         else:
             self.use_existing_policy()
-    
+    # POLICY -----------------------------------------------------------------
     def use_existing_policy(self):
         log_info("using existing policy")
         if not os.path.isfile(self.policy_id_path):
@@ -70,7 +70,8 @@ class CardanoComms:
             log_error("No policy-id json at " + str(self.policy_id_path))
             #raise Exception("No policy-id json at " + str(self.policy_id_path))
         self.policy_id = read_file_return_data(self.policy_id_path)["id"]
-        self.target_slot = read_file_return_data(self.slot_path)["slot"] 
+        self.target_slot = read_file_return_data(self.slot_path)["slot"]
+
 
     def gen_policy(self): # TODO 
         log_info("generating policy files...")
@@ -155,17 +156,19 @@ class CardanoComms:
         return nft_id, metadata
     
     
-    # simple tx --------------------------------------------------------------
-    def simple_tx(self, lace, recv_addr:str, sender_wallet:Wallet):
+    # SIMPLE TX --------------------------------------------------------------
+    def simple_tx(self, lace, recv_addr:list, sender_wallet:Wallet):
         sender_wallet.update_utxos()
         fee = "0"
         change = "0"
         lace = str(lace)
+        
         # build 1 
         self.build_tx(fee=fee, change=change,
             lace=lace,
             recv_addr=recv_addr,
             mint_wallet=sender_wallet,)
+        
         # calc fee
         witness = "1"
         cmd = "cardano-cli transaction calculate-min-fee"+\
@@ -177,13 +180,20 @@ class CardanoComms:
             " | cut -d \" \" -f1"
         fee = cmd_out(cmd)
         fee = str(fee).replace('b\'','').replace('\\n\'','')
+        
         # get funds
         sender_wallet.update_utxos() # TODO what happens if it keeps updating due to incoming payments
         funds = sender_wallet.lace
+        
+        # calc totalLace
+        totalLace = len(recv_addr) * int(float(lace))
+
+        while funds < totalLace + int(fee):
+            log_error(f"{sender_wallet.address} has '{funds}' but requires at least '{lace_to_ada(totalLace + fee)}' ADA")
+            time.sleep(20)
+
         # calculate change
-
-
-        change = int(funds) - int(fee) - int(lace)
+        change = int(funds) - int(fee) - int(totalLace)
         log_error("funds = " + str(funds))
         log_error("fee = " + str(fee))
         log_error("lace = " + str(lace))
@@ -231,7 +241,7 @@ class CardanoComms:
         return True
 
         
-    def build_tx(self, fee, lace, change, recv_addr:str, mint_wallet:Wallet):
+    def build_tx(self, fee, lace, change, recv_addr:list, mint_wallet:Wallet):
         # get usable transactions
         tx_in = ""
         for tx_id, tx_hash, _, contains_nft in mint_wallet.txs:
@@ -240,13 +250,21 @@ class CardanoComms:
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + str(change)
         # template transaction for cmd string # TODO self target slot in build_raw should be altered
+
+        txOutToRecv = ""
+        for a in recv_addr:
+            txOutToRecv += " --tx-out " + a + "+" + str(int(float(lace)))
+
         build_raw = "cardano-cli transaction build-raw "+\
             " --fee "+ fee +\
-            " --tx-out " + recv_addr + "+" + lace+\
+            txOutToRecv+\
             tx_out +\
             tx_in +\
             " --invalid-hereafter " + str(self.target_slot)+\
             " --out-file " + mint_wallet.tx_raw
+
+        #log_error(build_raw)
+        
         # remove any double whitespace
         build_raw = build_raw.replace("  "," ")
         #log_debug(build_raw)
@@ -260,19 +278,17 @@ class CardanoComms:
         return
 
 
+    # NFT MINTING ------------------------------------------------------------
     def mint_nft_using_txhash(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet, nft_name, tx_hash, tx_id, price):
-        utf8Name = nft_name
+        """ uses the transaction """
         # convert utf-8, nft name to base16
+        utf8Name = nft_name
         nft_name = nft_name.encode("utf-8")
         nft_name = base64.b16encode(nft_name)
         nft_name = replace_b_str(nft_name)
-        # read meta and 'fix' (insert policy id into it)
-        #metadata = read_file_return_data(metadata_path)
-        #nft_name = list(metadata['721'][self.policy_id].keys())[0]
-        # set min mint costs and arbitrary change value
-        #log_debug("nft-id: " + nft_id)
         change = 0 # 1.5 ada
         min_mint_cost = 1500000
+        
         # template build TODO note this doesn't return anything as it saves it in
         #                TODO   tx raw which is not so good as needs a mutex at the least and a diff name or unique name for tx
         self.build_mint_tx(fee="0", change=change,
@@ -294,26 +310,30 @@ class CardanoComms:
         fee = cmd_out(cmd)
         fee = str(fee).replace('b\'','').replace('\\n\'','')
         # get funds
-        mint_wallet.update_utxos(f"while attempting mint for '{tx_hash}'") # TODO what happens if it keeps updating due to incomiing payments
-        #funds = mint_wallet.lace
+        mint_wallet.update_utxos(f"while attempting mint for '{tx_hash}'") # TODO what happens if it keeps updating due to incoming payments
+        
         funds = price # TODO funds are the price of tx
+        
         # calculate change
         change = int(funds) - int(fee) - int(min_mint_cost)
         if change < 2:
             log_error("Invalid change \'" + str(lace_to_ada(change)) + "\' ada")
-        #log_debug("fee      : " +str(fee))
-        #log_debug("min-mint : " + str(min_mint_cost))
-        #log_debug("funds    : " +str(funds))
-        #log_debug("change   : " + str(change))
-        #log_debug("diff lace: " + str(int(funds) - int(change)))
-        #log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
+        
+        log_debug("fee      : " +str(fee))
+        log_debug("min-mint : " + str(min_mint_cost))
+        log_debug("funds    : " +str(funds))
+        log_debug("change   : " + str(change))
+        log_debug("diff lace: " + str(int(funds) - int(change)))
+        log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
+        
         # check if we have enough funding
         min_funds_required = int(min_mint_cost) + int(fee) + 10
         if funds < min_funds_required:
             log_error("Aborting mint."+\
                 " Low funds " + str(funds)+\
                 " expected " + str(min_funds_required))
-            return False
+            return False #TODO some is now wrong and infinite loop will happen update db if needed???
+        
         #build
         self.build_mint_tx(fee=fee,
             change=change,
@@ -324,16 +344,26 @@ class CardanoComms:
             metadata_path=metadata_path,
             tx_hash=tx_hash,
             txid=tx_id)
+        
         #sign
         if self.sign_mint_tx(wallet=mint_wallet) is False:
             return False
+        
         # send
         return self.submit_mint_tx(recv_addr=recv_addr, wallet=mint_wallet, nftName=utf8Name)
 
 
-    # TODO DEPRECATE OR IGNORE
-    # nft mint ---------------------------------------------------------------
+    # deprecated!?
     def mint_nft(self, metadata_path:str, recv_addr:str, mint_wallet:Wallet):
+        # convert utf-8, nft name to base16
+        utf8Name = nft_name
+        nft_name = nft_name.encode("utf-8")
+        nft_name = base64.b16encode(nft_name)
+        nft_name = replace_b_str(nft_name)
+        change = 0 # 1.5 ada
+        min_mint_cost = 1500000
+
+        """ uses funds from mint wallet address (airdrop basically) """
         # read meta and 'fix' (insert policy id into it)
         metadata = read_file_return_data(metadata_path)
         nft_id, metadata = self.add_policy_id_to_meta(metadata)
@@ -361,15 +391,22 @@ class CardanoComms:
         fee = str(fee).replace('b\'','').replace('\\n\'','')
         # get funds
         mint_wallet.update_utxos() # TODO what happens if it keeps updating due to incomiing payments
+
         funds = mint_wallet.lace
+        while lace_to_ada(funds) < 5:
+            log_error(f"{mint_wallet.addr} only has '{lace_to_ada(funds)}' add more ADA! Waiting...")
+            time.sleep(30)
+            
         # calculate change
         change = int(funds) - int(fee) - int(min_mint_cost)
+
         #log_debug("fee      : " +str(fee))
         #log_debug("min-mint : " + str(min_mint_cost))
         #log_debug("funds    : " +str(funds))
         #log_debug("change   : " + str(change))
         #log_debug("diff lace: " + str(int(funds) - int(change)))
         #log_debug("diff ada : " + str(lace_to_ada((int(funds) - int(change)))))
+
         # check if we have enough funding
         min_funds_required = int(min_mint_cost) + int(fee) + 10
         if funds < min_funds_required:
@@ -394,7 +431,6 @@ class CardanoComms:
 
     def build_mint_tx(self, fee, change, recv_addr, mint_wallet, nft_name, min_mint_cost, metadata_path, tx_hash=None, txid=None):
         """ builds a nft transaction """
-        # set  TODO TODO TODO TODO ere
 
         # build nft mint str (assume amount to be 1)        
         nft_mint_str = "\""
@@ -407,11 +443,12 @@ class CardanoComms:
         # get usable transactions
         tx_in = ""
         
-        if tx_hash != None: 
+        if tx_hash != None:
             tx_in = " --tx-in " + str(tx_hash) + '#' + str(txid) # TODO somewhere txid is mixed up is it in for loop above
 
         # set the mint wallet as our change address
         tx_out = " --tx-out " + mint_wallet.addr + "+" + change
+        
         # template transaction for cmd string
         build_raw = "cardano-cli transaction build-raw "+\
             " --fee "+ fee +\
@@ -423,9 +460,12 @@ class CardanoComms:
             " --metadata-json-file " + metadata_path +\
             " --invalid-hereafter " + str(self.target_slot)+\
             " --out-file " + mint_wallet.tx_raw
+        
         # remove any double whitespace
         build_raw = build_raw.replace("  "," ")
-        #log_debug(build_raw)
+        
+        log_error(build_raw)
+
         # run build tx cmd
         res = cmd_out(build_raw)
         if str(res) == EMPTY_BYTE_STRING:
