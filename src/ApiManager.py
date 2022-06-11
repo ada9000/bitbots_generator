@@ -1,14 +1,10 @@
-from DbComms import STATUS_IN_PROGRESS, STATUS_SOLD
+from DbComms import STATUS_IN_PROGRESS, STATUS_AWAITING_MINT, STATUS_AIRDROP, STATUS_SOLD
 from Utility import *
 from Wallet import *
 from CardanoComms import *
 from BlockFrostTools import *
 from Bitbots import *
 from threading import Thread, Lock
-
-#STATUS_AVAILABLE    = "" # empty string # TODO PUT ALL THIS IN DB COMMS FILE
-#STATUS_IN_PROGRESS  = "in-progress"
-#STATUS_SOLD         = "sold"
 
 class ApiManager:
     # TODO pass in reference to object of tx_ids
@@ -47,116 +43,83 @@ class ApiManager:
         self.db = DbComms(dbName=project, maxMint=max_mint, adaPrice=nft_price_ada)
 
 
-    """
     def run(self):
-        # add process for minting 
-        #   - shall go through reserved list and mint said nft
-        # add process for checking txs
-        #   - shall use mutex to reserve nft if found
-        #   - shall assign tx and addr to nft
+        # handle airdrops
+        self.airdrops()
 
-        # TODO load reserved list
-
-        # first complete all pending
-
-        txhash, tx_id = self.wallet.look_for_lace(lace=self.price)
-        # if tx hash exists in meta ignore
-        idx = self.bb.check_hash_exists(txhash) # TODO why is this correct behavior
-
-        print("hash")
-        log_error(txhash)
-        print("id")
-        log_error(tx_id)
-        customer_addr = None
-        while not customer_addr:
-            customer_addr = self.bf_api.find_sender(
-                txhash=txhash, 
-                recv_addr=self.wallet.addr, 
-                lace=self.price)
-
-            if customer_addr is None:
-                time.sleep(5)
-
-        # TODO MINT MUTEX AND USE IT TO CHECK THE CURRENT TX HASH
-        # BEFORE MINT LOOK AGAIN FOR TX HASH IN WALLET UTXOS
-
-        log_debug("search mutex acquire")
-        self.search_mutex.acquire()
-
-        # check idx is none from check hash
-        if idx == None:
-            try:
-                idx = self.bb.generate_next_nft(policy=self.get_policy(), customer_addr=customer_addr, tx_hash=txhash)
-                # update status and attach customer addr
-                if idx != None:
-                    self.bb.set_status(idx, STATUS_IN_PROGRESS)
-            finally:
-                log_debug("search mutex relase")
-                self.search_mutex.release()
-
-        # TODO check for mints that failed due to restart here
-        if idx == None:
-            # get tx_id # TODO
-            #idx, customer_addr, tx_hash = self.bb.find_status(STATUS_IN_PROGRESS)
-            pass
-
-        if idx == None:
-            log_debug("All minted ensure app enters refund mode")
-            # REFUND CODE HERE TODO
-            return True
-            #raise Exception("App must go into refund mode")
-
-        meta_path = self.bb.get_meta_path(idx)
-        # TODO 
-        # meta_path = get_nft_id_db()
-        log_debug("Nft \'" + str(idx) + "\' attempting mint to \'" + customer_addr + "\'")
-        res = False
-        # mint loop here
-        while not res:
-            self.mint_mutex.acquire()
-            # generate new tx ids # might need to refer to these later
-            #self.wallet.gen_new_tx_raw(tx_hash=txhash)
-            #self.wallet.gen_new_tx_signed(tx_hash=txhash)
-            log_error("attempting mint for " + customer_addr)
-            res = self.cc.mint_nft_using_txhash(metadata_path=meta_path, recv_addr=customer_addr, mint_wallet=self.wallet, tx_hash=txhash, tx_id=tx_id, price=self.price)
-            if not res:
-                time.sleep(5)
-            self.mint_mutex.release()
-
-        tx_hashes = self.wallet.get_txhashes()
-        while txhash in tx_hashes:
-            log_debug("txhash still in txhashes " + str(len(tx_hashes)))
-            time.sleep(5)
-            tx_hashes = self.wallet.get_txhashes()
-
-        log_error("TX success")
-        if res != False:
-            self.bb.set_status(idx, STATUS_SOLD)
-            log_debug("Nft \'" + str(idx) + "\' status set to sold")
-        
-        return False
-
-    def fake_mint(self):
-        idx = ""
-        while idx != None:
-            idx = self.bb.generate_next_nft(policy=self.get_policy(), customer_addr="false_addr", tx_hash="false_hash")
-            self.bb.set_status(idx=idx, new_status=STATUS_SOLD)
-
-    # TODO
-    def tx_job(self):
-        # query db for all prices
-        # look for ada
-        # if exact price is found update that table in db and add the customer address, also set status to awaiting mint
-        pass
-    """
-
-    def run(self):
+        # handle minting
         customer_job_t = Thread(target=self.customer_job, args=())
         mint_job_t = Thread(target=self.mint_job, args=())
         log_info("Starting customer job thread")
         customer_job_t.start()
         log_info("Starting mint job thread")
         mint_job_t.start()
+
+
+    def airdrops(self):
+        # first complete airdrops
+        airdropList = self.db.getAllWithStatus(STATUS_AIRDROP)
+        if airdropList:
+            log_debug("In airdrop list!")
+
+            airdropCount = len(airdropList)
+
+            # send simple tx of 2?
+            airdropAda = ada_to_lace(4.4)
+
+            addresses = []
+            for i in range(len(airdropList)):
+                addresses.append(self.wallet.addr)
+
+            log_debug("Airdrop simple tx")
+            success = self.cc.simple_tx(airdropAda, addresses, self.wallet)
+            if not success:
+                success = self.cc.simple_tx(airdropAda, addresses, self.wallet)
+                log_debug("airdrop simple tx failed, waiting...")
+                time.sleep(20)
+
+            # get all those tx's
+            txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=airdropAda)
+            while len(txHashIdList) < 1:
+                txHashIdList = self.wallet.find_txs_containing_lace_amount(lace=airdropAda)
+                log_debug("airdrop waiting on txs...")
+                time.sleep(20)
+
+
+
+            # mint all airdrops and set to sold
+            index = 0
+            for hexId, _, nftName, _, _, metaDataPath in airdropList:
+                successfulMint = False
+                
+                txHash, txId = txHashIdList[index]
+                print(f"{txHash} #{txId} hit" )
+                customerAddr = self.wallet.addr
+
+                while not successfulMint:
+                    log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
+                    successfulMint = self.cc.mint_nft_using_txhash(
+                        metadata_path=metaDataPath, 
+                        recv_addr=customerAddr, 
+                        mint_wallet=self.wallet,
+                        nft_name=nftName,
+                        tx_hash=txHash, 
+                        tx_id=txId, 
+                        price=airdropAda
+                    )
+                    if not successfulMint:
+                        log_error("Mint job waiting 25 seconds due to minting error")
+                        time.sleep(25)
+                # update status to sold
+                self.db.setStatus(hexId, STATUS_SOLD)
+                index += 1
+                log_debug("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
+
+        log_info("Airdrop minting complete")
+
+
+
+
 
 
     def customer_job(self):
@@ -197,10 +160,11 @@ class ApiManager:
                 else:
                     # update customers in database to include new customer, set status to awaiting mint
                     self.db.add_customer(address=customer_addr, txId=txId, txHash=txHash)
-                    log_debug("Customer added with address \'" + customer_addr + "\'")
+                    log_info("Customer added with address \'" + customer_addr + "\'")
             sold_out = self.db.sold_out()
         
         log_info(f"Customer job finished for project '{self.project}'")
+
 
     # TODO
     def mint_job(self):
@@ -212,18 +176,20 @@ class ApiManager:
                 mint nft
                 set status to sold
         """
+        log_info("Mint Job")
         sold_out = self.db.sold_out()
         while not sold_out:
             log_debug("Mint job looping start")
             time.sleep(20) # add a timeout
-            mintList = self.db.getAwaitingMint()
+            mintList = self.db.getAllWithStatus(STATUS_AWAITING_MINT)
             if mintList:
                 for hexId, customerAddr, nftName, txHash, txId, metaDataPath in mintList:
                     # set status to in progress and keep attempting mint
                     #self.db.setStatus(hexId, STATUS_IN_PROGRESS)
                     successfulMint = False
+                    log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
                     while not successfulMint:
-                        log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
+                        log_debug(f"mint loop for '{nftName}' with tx '{txHash}'")
                         successfulMint = self.cc.mint_nft_using_txhash(
                             metadata_path=metaDataPath, 
                             recv_addr=customerAddr, 
@@ -238,7 +204,7 @@ class ApiManager:
                             time.sleep(25)
                     # update status to sold
                     self.db.setStatus(hexId, STATUS_SOLD)
-                    log_debug("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
+                    log_info("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
             # break loop if sold out
             sold_out = self.db.sold_out()
 
