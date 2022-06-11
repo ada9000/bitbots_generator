@@ -106,7 +106,8 @@ class CardanoComms:
         cmd = "cardano-cli query tip " + self.network + " | jq .slot?"
         current_slot = int(cmd_out(cmd))
         # multiple expire time by 3600 seconds and add to amend inputted hours to the target slot
-        self.target_slot = current_slot + 8760 * 3600 # TODO allow user to pass this in
+        #self.target_slot = current_slot + 8760 * 3600 # TODO allow user to pass this in
+        self.target_slot = 112500909 # 2024-01-01 00:00:00
         write_json(self.slot_path, {"slot":self.target_slot})
         log_debug("slot current : " + str(current_slot))
         log_debug("slot target  : " + str(self.target_slot))
@@ -155,7 +156,7 @@ class CardanoComms:
         # return meta
         return nft_id, metadata
     
-    
+
     # SIMPLE TX --------------------------------------------------------------
     def simple_tx(self, lace, recv_addr:list, sender_wallet:Wallet):
         sender_wallet.update_utxos()
@@ -189,7 +190,7 @@ class CardanoComms:
         totalLace = len(recv_addr) * int(float(lace))
 
         while funds < totalLace + int(fee):
-            log_error(f"{sender_wallet.address} has '{funds}' but requires at least '{lace_to_ada(totalLace + fee)}' ADA")
+            log_error(f"{sender_wallet.addr} has '{str(funds)}' but requires at least '{str(lace_to_ada(int(totalLace) + int(fee)))}' ADA")
             time.sleep(20)
 
         # calculate change
@@ -217,23 +218,23 @@ class CardanoComms:
         if str(res) != EMPTY_BYTE_STRING:
             log_error("signing failed! " + str(res))
             return False
-        log_info("signing success")
+        log_debug("signing success")
 
         cmd = "cardano-cli transaction submit"+\
             " --tx-file " + sender_wallet.tx_signed + " " + self.network
         res = cmd_out(cmd)
         res = replace_b_str(res)
         res = res.replace('\n','')
-        log_info(res)
-        if 'BadImputsUTxO' in res:
+
+        if 'BadImputsUTxO' in str(res):
             log_error("BadImputsUTxO")
             return False
-        if 'ValueNotConservedUTxO' in res:
+        if 'ValueNotConservedUTxO' in str(res):
             log_error("ValueNotConservedUTxO")
             log_error("Maybe try funding " + sender_wallet.addr + " it contains " + str(lace_to_ada(sender_wallet.lace)))
             return False
-        if 'Error' in res:
-            log_error("Error" + res)
+        if 'Error' in str(res):
+            log_error("Error" + str(res))
             return False
 
 
@@ -271,10 +272,10 @@ class CardanoComms:
         # run build tx cmd
         res = cmd_out(build_raw)
         if str(res) == EMPTY_BYTE_STRING:
-            log_info("build tx success")
+            log_debug("build tx success")
         else:
             res = replace_b_str(res)
-            log_error(str(res))
+            log_error(f"Build tx error with '{str(recv_addr)}' '{str(res)}'")
         return
 
 
@@ -329,8 +330,8 @@ class CardanoComms:
         # check if we have enough funding
         min_funds_required = int(min_mint_cost) + int(fee) + 10
         if funds < min_funds_required:
-            log_error("Aborting mint."+\
-                " Low funds " + str(funds)+\
+            log_error("Aborting mint. for '"+ utf8Name +\
+                "' - Low funds " + str(funds)+\
                 " expected " + str(min_funds_required))
             return False #TODO some is now wrong and infinite loop will happen update db if needed???
         
@@ -469,7 +470,7 @@ class CardanoComms:
         # run build tx cmd
         res = cmd_out(build_raw)
         if str(res) == EMPTY_BYTE_STRING:
-            log_info("build tx success for " + nft_mint_str)
+            log_debug("build tx success for " + nft_mint_str)
         else:
             res = replace_b_str(res)
             log_error(str(res))
@@ -489,7 +490,7 @@ class CardanoComms:
         if str(res) != EMPTY_BYTE_STRING:
             log_error("signing failed! " + str(res))
             return False
-        log_info("signing success")
+        log_debug("signing success")
         return True
 
 
