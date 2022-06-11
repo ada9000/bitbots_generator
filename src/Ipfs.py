@@ -40,7 +40,7 @@ class IpfsManager:
         if error:
             log_debug(f"IPFS: Issue adding and pinning '{file_hash}' generated from '{file_path}'")
             breakpoint() # remove or leave?
-            time.sleep(0.2)
+            time.sleep(1)
             self.add(file_path)
 
         return file_hash

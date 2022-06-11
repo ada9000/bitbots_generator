@@ -28,24 +28,30 @@ class BlockFrostTools:
         return self.api.health()
 
     def find_sender(self, txhash:str, recv_addr:str, lace):
-        lace = str(lace)
-        res = self.api.transaction_utxos(hash=txhash)
+        try:
+            lace = str(lace)
+            res = self.api.transaction_utxos(hash=txhash)
 
-        found_recv = False
-        target_addr = False
-        # TODO add check for lace?
+            found_recv = False
+            target_addr = False
+            # TODO add check for lace?
 
-        # TODO deprecate this logic
-        for x in res.inputs:
-            if x.address == recv_addr:
-                found_recv = True
-        #END TODO ------
-        
-        # TODO what if multiple outputs i.e more than 2?
-        for x in res.outputs:
-            #logging.info(x.address)
-            if x.address != recv_addr:
-                return x.address
+            # TODO deprecate this logic
+            for x in res.inputs:
+                if x.address == recv_addr:
+                    found_recv = True
+            #END TODO ------
+            
+            # TODO what if multiple outputs i.e more than 2?
+            for x in res.outputs:
+                #logging.info(x.address)
+                if x.address != recv_addr:
+                    return x.address
+        except ApiError:
+            log_error(f"Blockfrost API error with {txHash} trying again...")
+            time.sleep(1)
+            self.find_sender(tx_hash, recv_addr, lace)
+
         return None
 
         #print("outputs")
