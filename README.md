@@ -85,6 +85,16 @@ exit
 Note db lives at
 /var/lib/mysql/<DB_NAME>
 
+## backup sql
+backup using mysqldump
+```
+sudo mysqldump TARGET > BACKUP.sql
+```
+restore, you will need to create the db first in mysql
+```
+sudo mysql NEW_DB_NAME < BACKUP.sql
+```
+
 # Running api
 Start api
 ```flask run --host=<IP> --port=<PORT>```
