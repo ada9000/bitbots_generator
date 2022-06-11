@@ -153,7 +153,7 @@ class Wallet:
 
     def look_for_lace(self, lace):
         lace = int(lace)
-        logging.debug("Waiting for tx with \'" + str(lace_to_ada(lace)) + "\' ada in \'" + self.addr + "\'")
+        log_debug("Waiting for tx with \'" + str(lace_to_ada(lace)) + "\' ada in \'" + self.addr + "\'")
         while True:
             utxos = self.update_utxos()
             for utxo in utxos:
