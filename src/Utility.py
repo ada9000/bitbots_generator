@@ -2,8 +2,8 @@ import json
 import logging
 import re
 import os
+from datetime import datetime
 from subprocess import Popen, PIPE, STDOUT
-logging.basicConfig(level=logging.DEBUG)
 
 # consts ---------------------------------------------------------------------
 NEW_CIP = "payload"
@@ -36,7 +36,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler(PROJECT_DIR + "debug.log"),
+        logging.FileHandler(PROJECT_DIR + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".log"),
         logging.StreamHandler()
     ]
 )
@@ -44,16 +44,16 @@ logging.basicConfig(
 # logging --------------------------------------------------------------------
 def log_debug(msg:str):
     msg = " " + COLOR_YELLOW + msg + COLOR_RESET
-    logging.debug(msg)
+    print(msg)
     pass
 
 def log_info(msg:str):
-    msg = " " + COLOR_CYAN + msg + COLOR_RESET
     logging.info(msg)
+    msg = " " + COLOR_CYAN + msg + COLOR_RESET
 
 def log_error(msg:str):
-    msg = " " + COLOR_RED + msg + COLOR_RESET
     logging.info(msg)
+    msg = " " + COLOR_RED + msg + COLOR_RESET
 
 # files ----------------------------------------------------------------------
 def read_file_return_data(filepath):
@@ -114,7 +114,7 @@ def replace_b_str(msg):
 
 # Cardano conversions --------------------------------------------------------
 def ada_to_lace(x:float):
-    return float(x) * 1000000
+    return int(float(x) * 1000000)
 
 def lace_to_ada(x:float):
     return float(x) / 1000000
