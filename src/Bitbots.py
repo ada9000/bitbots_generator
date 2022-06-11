@@ -211,13 +211,22 @@ class Bitbots:
             # if the dirname is variable add none type 
             if attribute in self.variable_attributes:
                 # TODO add none type
-                if attribute == "hats":
-                    trait = "Default"
-                else:
-                    trait = "no_" + attribute
+                #if attribute == "hats":
+                #    trait = "Default"
+                #else:
+                trait = "no_" + attribute
                 self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, data)
                 id_num += 1
                 traits.append(trait)
+
+                # add headless?
+                if attribute == 'special':
+                    trait = "headless"
+                    self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, "")
+                    self.nft_traits[trait]['weight'] = 0
+                    id_num += 1
+                    traits.append(trait)
+
             # geneate metadata for each trait
             for trait in os.listdir(sub_dir_path):
                 filepath = sub_dir_path + '/' + trait
@@ -430,7 +439,7 @@ class Bitbots:
 
         # requires mark on neck?
         if random.random() < 0.01:
-            log_debug("Mark of Pixel added")
+            log_info("Mark of Pixel added")
             refs += self.find_payload_refs('mark_of_pixel')
 
         # add id
@@ -836,18 +845,40 @@ class Bitbots:
 
             refs = self.find_refs_for_props(properties, nft_idx)
             
+
+            # weird nfts here
+            # 404 ------------------------------------------------------------
+            if nft_idx in MISSING_404_ID or properties['special'] == 'headless':
+                # reset UUID
+                used_hashes.remove(uuidHexHash)
+                fullUUID = "0x"
+                uuidHexHash = "0x"
+                
+                # 404 requires props to be none 
+                ignoreKeys = ['bg_effects', 'colour', 'bg_colour', 'uid', 'special']
+                properties['special'] = 'headless'
+                for key, value in properties.items():
+                    if key not in ignoreKeys:
+                        properties[key] = 'no_' + key
+                
+                # build new uuid
+                for key, value in properties.items():
+                    # fix uid
+                    if key != 'uid':
+                        fullUUID += str(hex(self.nft_traits[value]["id"])[2:]).zfill(2).upper()
+
+                    attributesToIgnoreInHexHash = ['colour','bg_colour', 'uid']
+                    if key not in attributesToIgnoreInHexHash:
+                        uuidHexHash += str(hex(self.nft_traits[value]["id"])[2:]).zfill(2)
+
+                properties['uid'] = fullUUID # save unquie id for metadata
+                # add updated hash
+                used_hashes.append(uuidHexHash)
+            #-----------------------------------------------------------------
+
+
             # clean property names for payload metadata
             properties = self.clean_props(properties)
-
-            # alter properties tags here
-            if nft_idx in MISSING_404_ID or properties['special'] == 'headless':
-                ignoreKeys = ['bg effects', 'colour', 'bg colour']
-                for key, value in properties.items():
-                    if key in ignoreKeys:
-                        continue
-                    else:
-                        properties[key] = 'none'
-                properties['special'] = 'headless'
 
             # payload
             nft_payload = None
@@ -869,8 +900,8 @@ class Bitbots:
 
             # get ipfs hash from block frost
             # TODO
-            ipfs_hash = self.ipfs.add(svg_file_path)
-            #ipfs_hash = "TODO turn on and pin"
+            #ipfs_hash = self.ipfs.add(svg_file_path) # TODO TODO TODO TODO
+            ipfs_hash = "TODO turn on and pin"
 
             # create the nft meta with the payload index
             nft_meta = n.generate_nft(
