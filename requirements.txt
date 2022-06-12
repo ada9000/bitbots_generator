@@ -7,3 +7,4 @@ Jinja2==3.1.1
 Flask==2.0.3
 Flask-Cors==3.0.10
 blockfrost-python==0.4.3
+protobuf==3.20.0
