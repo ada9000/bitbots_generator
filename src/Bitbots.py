@@ -53,6 +53,8 @@ MAX_PAYLOAD_BYTES = 14000
 # Bitbots --------------------------------------------------------------------
 class Bitbots:
     def __init__(self, max_mint:int=MINT_MAX, max_payload_bytes:int=MAX_PAYLOAD_BYTES, project:str=None, policy:str=None, adaPrice:str=None):
+        log_info(f"🥳 Started Bitbot generation for project '{project}'")
+
         # check args
         if project == None:
             raise Exception("No project defined")
@@ -81,11 +83,15 @@ class Bitbots:
             "#90d7d5",
             "#62bb9c",
             "#90d797",
-            "#ff8b8b", 
+            "#ff8b8b",
+            "#f2b5ff",
+            "#e59a54",
+            "#e55454",
             "#ffd700",
             "#696969",
             "#ffffff",
-            "#2897e0"]
+            "#5498e5",
+            ]
         self.wire_colours = [
             ("#009bff","#fff800"),
             ("#ff0093","#009bff"),
@@ -147,6 +153,7 @@ class Bitbots:
         self.nft_weights_file       = self.project_dir + "_nft-weights.json"
         self.nft_payload_file       = self.project_dir + "_nft-payload.json"
         self.nft_rarity_file        = self.project_dir + "_nft-rarity.json"
+        self.nft_grammar_file       = self.project_dir + "_grammar.json"
        
         # save all meta and svg to disk
         self.nft_meta_dir         = self.project_dir + "meta/"
@@ -219,13 +226,21 @@ class Bitbots:
                 id_num += 1
                 traits.append(trait)
 
-                # add headless?
+                # add custom traits ---------------------------------------------------
                 if attribute == 'special':
                     trait = "headless"
                     self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, "")
                     self.nft_traits[trait]['weight'] = 0
                     id_num += 1
                     traits.append(trait)
+
+                if attribute == 'special':
+                    trait = "unlimited_power"
+                    self.nft_traits[trait] = self.nft_meta_inner(attribute, id_num, "")
+                    self.nft_traits[trait]['weight'] = 0
+                    id_num += 1
+                    traits.append(trait)
+
 
             # geneate metadata for each trait
             for trait in os.listdir(sub_dir_path):
@@ -437,10 +452,16 @@ class Bitbots:
         # neck
         refs += self.find_payload_refs('neck')
 
-        # requires mark on neck?
+        # silent traits ------------------------------------------------------
         if random.random() < 0.01:
             log_info("Mark of Pixel added")
             refs += self.find_payload_refs('mark_of_pixel')
+        if random.random() < 0.02:
+            log_info("Not a bot!")
+            refs += self.find_payload_refs('not_a_bot')
+        if random.random() < 0.008:
+            log_info("Bugs added")
+            refs += self.find_payload_refs('bug')
 
         # add id
         # id tag -------------------------------------------------------------
@@ -468,7 +489,14 @@ class Bitbots:
 
         # head shadow and other traits ---------------------------------------
         refs += self.find_payload_refs('head_shadow')
-        refs += self.find_payload_refs(properties['special'])
+
+        # if special is special frog!
+        if properties['special'] == 'unlimited_power':
+            refs += self.find_payload_refs('freg')
+            refs += self.find_payload_refs('froggo')
+        else:
+            refs += self.find_payload_refs(properties['special'])
+
         refs += self.find_payload_refs('head')
         refs += self.find_payload_refs(properties['hats'])
         refs += self.find_payload_refs(properties['ears'])
@@ -807,6 +835,9 @@ class Bitbots:
 
         nftRarityTest = {}
 
+        traitsGrammar = []
+        attributesGrammar = []
+
         # loop while there are still payloads to be added or nfts left to mint
         for i in range(int(self.max_mint)):
             # check current idx
@@ -991,6 +1022,13 @@ class Bitbots:
             if current_payload_idx > len(self.payload_data) - 1:
                 payloadsNeedAdding = False
 
+            # finaly append to grammar lists for checks later
+            propertiesGrammar = n.fixProperties(properties)
+            for attribute, trait in propertiesGrammar.items():
+                if trait not in traitsGrammar:
+                    traitsGrammar.append(trait)
+                if attribute not in attributesGrammar:
+                    attributesGrammar.append(attribute)
 
         if payloadsNeedAdding:
             log_error("Not all payloads have been added!")
@@ -1004,6 +1042,9 @@ class Bitbots:
         self.db.setAllGenerated()
 
         self.rarity(nftRarityTest)
+
+        propertyNames = {"attributes":attributesGrammar, "traits":traitsGrammar}
+        pretty_write_json(self.nft_grammar_file, propertyNames)
 
         log_info("Last payload is int\'" + str(last_nft_with_payload) + "\' or hex\'" + int_to_hex_id(last_nft_with_payload)+ "\'")
         return last_nft_with_payload 
