@@ -1010,7 +1010,7 @@ class Bitbots:
                 minimalMeta=minimalMeta,
                 )
 
-            if int(nft_idx, 16) <= int(self.airdrop): # TODO
+            if int(nft_idx, 16) < int(self.airdrop): # TODO
                 self.db.setStatus(nft_idx, STATUS_AIRDROP)
             
             # nft created

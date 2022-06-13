@@ -195,3 +195,10 @@ class Wallet:
         if "Network.Socket.connect" in str(res):
             return False
         return True
+    
+    def refund(self, txsToIgnore):
+        # get all txs
+
+        # return filteded tx#s
+
+        pass

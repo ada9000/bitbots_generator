@@ -1,4 +1,4 @@
-from ApiManager import ApiManager
+from MintManager import MintManager
 from Utility import TESTNET, MAINNET
 from Wallet import Wallet
 
@@ -21,5 +21,5 @@ if __name__ == "__main__":
         if x == None:
             raise Exception("Missing .env value")
 
-    a = ApiManager(network=network, mint_wallet=mintWallet, nft_price_ada=price, project=project, max_mint=maxMint)
+    a = MintManager(network=network, mint_wallet=mintWallet, nft_price_ada=price, project=project, max_mint=maxMint)
     a.run()

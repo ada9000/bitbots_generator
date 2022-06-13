@@ -107,7 +107,8 @@ class CardanoComms:
         current_slot = int(cmd_out(cmd))
         # multiple expire time by 3600 seconds and add to amend inputted hours to the target slot
         #self.target_slot = current_slot + 8760 * 3600 # TODO allow user to pass this in
-        self.target_slot = 112500909 # 2024-01-01 00:00:00
+        #self.target_slot = 112500909 # 2024-01-01 00:00:00
+        self.target_slot = 80964909 # 2023-01-01 00:00:00
         write_json(self.slot_path, {"slot":self.target_slot})
         log_debug("slot current : " + str(current_slot))
         log_debug("slot target  : " + str(self.target_slot))
@@ -195,10 +196,10 @@ class CardanoComms:
 
         # calculate change
         change = int(funds) - int(fee) - int(totalLace)
-        log_error("funds = " + str(funds))
-        log_error("fee = " + str(fee))
-        log_error("lace = " + str(lace))
-        log_error("change = " + str(change))
+        log_debug("funds = " + str(funds))
+        log_debug("fee = " + str(fee))
+        log_debug("lace = " + str(lace))
+        log_debug("change = " + str(change))
 
         
         # build 2
@@ -237,7 +238,7 @@ class CardanoComms:
             log_error("Error" + str(res))
             return False
 
-
+        log_info("Payment sent")
         # TODO check if payment was sent?
         return True
 
@@ -502,8 +503,11 @@ class CardanoComms:
         res = res.replace('\n','')
 
         if 'Transaction successfully submitted' in res:
-            log_info(f"Successfully submitted '{nftName}' to '{recv_addr}'")
-            return True
+            outputTx = self.getNewTxHash(wallet)
+            log_info(f"Successfully submitted '{nftName}' to '{recv_addr}' output tx is {outputTx}")
+
+            # return the new tx hash generated from the transcation
+            return outputTx
 
         if 'BadImputsUTxO' in res:
             errMsg = "BadImputsUTxO"
@@ -520,3 +524,10 @@ class CardanoComms:
 
         log_error(f"Issue with minting nft '{nftName}' to '{recv_addr}' error is '{errMsg}' ")
         return False
+
+    def getNewTxHash(self, wallet:Wallet):
+        cmd = f"cardano-cli transaction txid --tx-file {wallet.tx_signed}"
+        res = cmd_out(cmd)
+        res = replace_b_str(res)
+        res = res.replace("\\n","")
+        return res

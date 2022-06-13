@@ -1,4 +1,4 @@
-from DbComms import STATUS_IN_PROGRESS, STATUS_AWAITING_MINT, STATUS_AIRDROP, STATUS_SOLD
+from DbComms import STATUS_IN_PROGRESS, STATUS_AWAITING_MINT, STATUS_AIRDROP, STATUS_SOLD, STATUS_ISSUE
 from Utility import *
 from Wallet import *
 from CardanoComms import *
@@ -6,7 +6,7 @@ from BlockFrostTools import *
 from Bitbots import *
 from threading import Thread, Lock
 
-class ApiManager:
+class MintManager:
     # TODO pass in reference to object of tx_ids
     # with mutex when a process is processing a tx it adds it to list
     def __init__(self, network:str=TESTNET, mint_wallet:Wallet=None, nft_price_ada:int=100, project:str=None, max_mint:int=8192, new_policy:bool=False):
@@ -47,6 +47,10 @@ class ApiManager:
         # handle airdrops
         self.airdrops()
 
+        # check for issues
+        if self.db.issueFound():
+            raise Exception(f"Issue found please resolve in DB for '{self.project}'")
+
         # handle minting
         customer_job_t = Thread(target=self.customer_job, args=())
         mint_job_t = Thread(target=self.mint_job, args=())
@@ -65,7 +69,7 @@ class ApiManager:
             airdropCount = len(airdropList)
 
             # send simple tx of 2?
-            airdropAda = ada_to_lace(4.4)
+            airdropAda = ada_to_lace(5)
 
             addresses = []
             for i in range(len(airdropList)):
@@ -90,28 +94,35 @@ class ApiManager:
             # mint all airdrops and set to sold
             index = 0
             for hexId, _, nftName, _, _, metaDataPath in airdropList:
-                successfulMint = False
+                outputTx = False
                 
                 txHash, txId = txHashIdList[index]
                 print(f"{txHash} #{txId} hit" )
                 customerAddr = self.wallet.addr
+                try:
+                    while not outputTx:
+                        log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
+                        outputTx = self.cc.mint_nft_using_txhash(
+                            metadata_path=metaDataPath, 
+                            recv_addr=customerAddr, 
+                            mint_wallet=self.wallet,
+                            nft_name=nftName,
+                            tx_hash=txHash, 
+                            tx_id=txId, 
+                            price=airdropAda
+                        )
+                        if not outputTx:
+                            log_error(f"Mint job waiting 25 seconds due to minting error. OutputTx={str(outputTx)}")
+                            time.sleep(25)
+                    # update status to sold
+                    self.db.setStatus(hexId, STATUS_SOLD)
+                    self.db.setOutputTx(hexId, outputTx)
+                except Exception as e:
+                    self.db.setStatus(hexId, STATUS_ISSUE)
+                    log_error(f"Exception hit '{nftName}' with tx '{txHash}'...")
+                    log_error(f"'{nftName}' Error '{e}'")
+                    self.db.setOutputTx(hexId, outputTx)
 
-                while not successfulMint:
-                    log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
-                    successfulMint = self.cc.mint_nft_using_txhash(
-                        metadata_path=metaDataPath, 
-                        recv_addr=customerAddr, 
-                        mint_wallet=self.wallet,
-                        nft_name=nftName,
-                        tx_hash=txHash, 
-                        tx_id=txId, 
-                        price=airdropAda
-                    )
-                    if not successfulMint:
-                        log_error("Mint job waiting 25 seconds due to minting error")
-                        time.sleep(25)
-                # update status to sold
-                self.db.setStatus(hexId, STATUS_SOLD)
                 index += 1
                 log_debug("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
 
@@ -186,35 +197,36 @@ class ApiManager:
                 for hexId, customerAddr, nftName, txHash, txId, metaDataPath in mintList:
                     # set status to in progress and keep attempting mint
                     #self.db.setStatus(hexId, STATUS_IN_PROGRESS)
-                    successfulMint = False
+                    outputTx = False
                     log_info(f"Starting '{nftName}' mint for tx '{txHash}'")
-                    while not successfulMint:
-                        log_debug(f"mint loop for '{nftName}' with tx '{txHash}'")
-                        successfulMint = self.cc.mint_nft_using_txhash(
-                            metadata_path=metaDataPath, 
-                            recv_addr=customerAddr, 
-                            mint_wallet=self.wallet,
-                            nft_name=nftName,
-                            tx_hash=txHash, 
-                            tx_id=txId, 
-                            price=self.lace_mint_price
-                        )
-                        if not successfulMint:
-                            log_error("Mint job waiting 25 seconds due to minting error")
-                            time.sleep(25)
-                    # update status to sold
-                    self.db.setStatus(hexId, STATUS_SOLD)
+                    try:
+                        while not outputTx:
+                            log_debug(f"mint loop for '{nftName}' with tx '{txHash}'")
+                            outputTx = self.cc.mint_nft_using_txhash(
+                                metadata_path=metaDataPath, 
+                                recv_addr=customerAddr, 
+                                mint_wallet=self.wallet,
+                                nft_name=nftName,
+                                tx_hash=txHash, 
+                                tx_id=txId, 
+                                price=self.lace_mint_price
+                            )
+                            if not outputTx:
+                                log_error(f"Mint job waiting 25 seconds due to minting error. OutputTx={str(outputTx)}")
+                                time.sleep(25)
+                        # update status to sold
+                        self.db.setOutputTx(hexId, outputTx)
+                        self.db.setStatus(hexId, STATUS_SOLD)
+                    except Exception as e:
+                        self.db.setStatus(hexId, STATUS_ISSUE)
+                        log_error(f"Exception hit '{nftName}' with tx '{txHash}'...")
+                        log_error(f"'{nftName}' Error '{e}'")
+                        self.db.setOutputTx(hexId, outputTx)
+
+
                     log_info("Minted NFT with id \'"+ hexId +"\' to address \'" + customerAddr + "\'")
             # break loop if sold out
             sold_out = self.db.sold_out()
-
-        # while active
-        # check db for status awaiting mint
-        # if found start call mint
-            # many ways to handle this
-            # a) one mint job but we need to add time to db to ensure order is fair
-            # b) multiple payment wallets, would be faster, but more wallets to manage easy with cntools though, db needs to be updated again
-                # would require a purchase of ada handles bb0 bb1 bb2 bb3 bb4 bb5 bb6
 
         log_info(f"Mint job finished for project '{self.project}'")
 
@@ -222,6 +234,13 @@ class ApiManager:
     def refund_job(self):
         # TODO must ensure we don't drain fees by loop refunding the 
         # mint wallet!!!!!!!!!!
+
+        # send all confirmed ada to self
+
+        # whitelist the tx for future ignoring to avoid drain via fee's?
+
+        # return all other ada
+
         pass
 
     # API --------------------------------------------------------------------

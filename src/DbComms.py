@@ -19,9 +19,10 @@ STATUS_AWAITING_MINT        = "awaiting-mint"
 STATUS_IN_PROGRESS          = "minting" # this state is required in case of hard failure, in which something may or maynot have minted
 STATUS_SOLD                 = "sold"
 STATUS_AIRDROP              = "airdrop"
+STATUS_ISSUE                = "issue"
 
 # status list to validate correct status is being used
-STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD, STATUS_AIRDROP]
+STATUS_LIST = [STATUS_AVAILABLE, STATUS_AWAITING_MINT, STATUS_IN_PROGRESS, STATUS_SOLD, STATUS_AIRDROP, STATUS_ISSUE]
 
 NFT_STATUS_TABLE = "nft_status"
 NFT_STATE_TABLE = "state"
@@ -37,7 +38,7 @@ class DbComms:
         # check for dbName
         if dbName == '':
             raise Exception("Missing db name parameter")
-        self.dbName = "test_" + dbName # TODO note test
+        self.dbName =  dbName
         self.maxMint = int(maxMint)
         # get password
         load_dotenv()
@@ -119,7 +120,6 @@ class DbComms:
         sql = "SELECT " + x + " FROM " + table
         if where != None:
             sql += " WHERE " + where
-        #log_error(sql) #TODO remove log
         res = None
         DB_MUTEX.acquire()
         try:
@@ -190,8 +190,10 @@ class DbComms:
         other =  "hexId VARCHAR(4) PRIMARY KEY, "
         other += "intId INT, "
         other += "status VARCHAR(255), "
-        other += "txHash VARCHAR(100), "
+        other += "txHash VARCHAR(255), "
         other += "txId VARCHAR(100), "
+        other += "outputTx VARCHAR(255), "
+        other += "spentOutputTx BIT, "
         other += "customerAddr VARCHAR(255), "
         other += "nftName VARCHAR(255), "
         other += "metaFilePath VARCHAR(255), "
@@ -231,13 +233,11 @@ class DbComms:
     
     def getNftPagination(self, index):
         where = "intId >= " + str(index) + " LIMIT 32"
-        #res = self.select("hexId, intId, nftName, status, hasPayload, meta", NFT_STATUS_TABLE, where)
         res = self.select("hexId, intId, nftName, status, hasPayload, minimalMeta, svg, ipfsHash", NFT_STATUS_TABLE, where)
         paginationJson = {}
 
         for hexId, intId, nftName, status, hasPayload, meta, svg, ipfsHash in res:
-            meta = json.loads(meta) # TODO convert to null if status 
-            #paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta}
+            meta = json.loads(meta) 
             svg = svg.decode('utf-8')
             paginationJson[intId] = {"hexId":hexId, "nftName":nftName, "status":status, "hasPayload":hasPayload, "meta":meta, "svg":svg}
 
@@ -354,8 +354,7 @@ class DbComms:
             # returns price if available else None
 
             # get hexId of next available....
-            hexId = None # TODO
-            # # TODO MUTEX 
+            hexId = None 
             # get hex id
             where = "status='" + STATUS_AVAILABLE + "'"
             allAvailable = self.select("hexId", NFT_STATUS_TABLE, where)
@@ -436,6 +435,33 @@ class DbComms:
             return None
         finally:
             DB_STATUS_MUTEX.release()
+
+    def sold_out(self):
+        # get all nfts that don't have the sold status
+        where = "status='" + STATUS_ISSUE + "'"
+        issues = self.select("txHash", NFT_STATUS_TABLE, where)
+        if issues:
+            return True
+        return False
+
+
+    def setOutputTx(self, hexId, outputTx):
+        DB_STATUS_MUTEX.acquire()
+        if outputTx == False:
+            raise Exception(f"Issues with setOutputTx '{str(outputTx)}'")
+        try:
+            update = "outputTx='" + outputTx + "' "
+            where = "hexId='" + hexId + "'"
+            self.update(NFT_STATUS_TABLE, update, where)
+        finally:
+            DB_STATUS_MUTEX.release()
+
+    def getOutputTxList(self):
+        # get all nfts that 
+        where = "outputTx is NOT NULL'"
+        outputTxs = self.select("outputTx", NFT_STATUS_TABLE, where)
+        return outputTxs
+
 
     def setStatus(self, hexId, status):
         DB_STATUS_MUTEX.acquire()

@@ -1,5 +1,5 @@
 import os
-from ApiManager import *
+from MintManager import *
 from dotenv import load_dotenv
 import sys
 
@@ -23,4 +23,4 @@ except:
 
 print(f"Project is {project}")
 
-apiManager = ApiManager(network=network, mint_wallet=mintWallet, project=project, nft_price_ada=price, max_mint=maxMint)
+MintManager = MintManager(network=network, mint_wallet=mintWallet, project=project, nft_price_ada=price, max_mint=maxMint)
