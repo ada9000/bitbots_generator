@@ -1,12 +1,16 @@
+import os
+import time
+
+from blockfrost import ApiError, BlockFrostIPFS
 from dotenv import load_dotenv
-from blockfrost import BlockFrostIPFS, ApiError
-import os, time
+
 from Utility import *
+
 
 class IpfsManager:
     def __init__(self):
         load_dotenv()
-        self.apiKey = os.getenv('IPFS')
+        self.apiKey = "***REMOVED***" #os.getenv('IPFS')
         if self.apiKey == None:
             raise Exception("No 'IPFS' key Update .env")
         # init api
@@ -14,6 +18,16 @@ class IpfsManager:
         self.ipfs = BlockFrostIPFS(
             project_id=self.apiKey
         )
+
+
+    def pin_from_file(self):
+        with open("./ipfs.txt", "r") as file:
+            ipfsHashes = file.readlines();
+
+
+
+        for hash in ipfsHashes:
+            hash;
 
     
     def add(self, file_path: str):
@@ -50,9 +64,7 @@ class IpfsManager:
         # REMOVE TODO delete after testing
         try:
             res = self.ipfs.pined_object_remove(file_hash)
-            file_hash = res.ipfs_hash
-            status = res.state
-            breakpoint()
+            print("remove result:", res)
         except ApiError as e:
             log_error(str(e))
             breakpoint()
@@ -70,10 +82,44 @@ class IpfsManager:
 
     def get_all_pinned(self):
         try:
-            pinned = self.ipfs.pined_list()
+            page = 1
+            pinned = self.ipfs.pined_list(page=page)
+            all = []
+            while len(pinned) > 0:
+                print("page:", page)
+                pinned = self.ipfs.pined_list(page=page)
+                page += 1
+                for x in pinned:
+                    all.append(x)
+
+            print("total:")
+            print(len(all))
+
+            return all
+
         except ApiError as e:
             log_error(str(e))
-        return pinned
+        return []
+
+    def removed_not_minted(self):
+        storedInIPFS = self.get_all_pinned();
+
+        hashesToKeep = []
+        with open('ipfs.txt', 'r') as file:
+            # Read the file as a list of strings
+            hashesToKeep = [line.rstrip('\n') for line in file]
+
+        print("lenStored", len(storedInIPFS))
+        print("lenHashes", len(hashesToKeep))
+
+        count = 0
+        for x in storedInIPFS:
+            if x.ipfs_hash not in hashesToKeep:
+                print("removing", x.ipfs_hash)
+                self.remove(file_hash=x.ipfs_hash)
+                count +=1
+
+        print("removed", count)
 
 
     def remove_all_pinned_TEST_ONLY(self):
