@@ -10,7 +10,7 @@ from Utility import *
 class IpfsManager:
     def __init__(self):
         load_dotenv()
-        self.apiKey = "***REMOVED***" #os.getenv('IPFS')
+        self.apiKey = os.getenv('IPFS')
         if self.apiKey == None:
             raise Exception("No 'IPFS' key Update .env")
         # init api
