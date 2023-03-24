@@ -1,37 +1,36 @@
 # todo
-[x] mouths should be mouths
-[] merge background colour with planets in effects
-[] if bg is planet effect is none
-[] IPFS (I guess -_-)
-[] Ensure correct release i.e input is no longer called input v3
-[x] Fix id position again
-[x] if moon remove bg
-[x] sort out bg colour
-[] emoji tags? lol
+- [x] mouths should be mouths
+- [ ] merge background colour with planets in effects
+- [x] if bg is planet effect is none
+- [x] IPFS (I guess -_-)
+- [x] Ensure correct release i.e input is no longer called input v3
+- [x] Fix id position again
+- [x] if moon remove bg
+- [x] sort out bg colour
+- [ ] emoji tags? lol
 
-[x] ensure replace _ with space in nft traits etc
-[] special random strings that are traits...
-
-
-[] enchantments 0x | defense set
-    circuit protection, enchanted surface, 
-[] enchantments 0x | offense set
-[] bit-flipped option
+- [x] ensure replace _ with space in nft traits etc
+- [ ] special random strings that are traits...
 
 
-enchantments
-    big brain? | gm? / ngmi? | elven armour | solar | wind |
-    agi core | ai core | heat shielding | water resistant | soul encapsulation |
-    potato | plant based enhancements | 
+- [ ] enchantments 0x | defense set, circuit protection, enchanted surface, 
+- [ ] enchantments 0x | offense set
+- [ ] bit-flipped option
 
-technology 
-    elven | plant | unknown
 
-rankings
-    efficiency
-    armour
-    health
-    intelligence
+##enchantments
+  -  big brain? | gm? / ngmi? | elven armour | solar | wind |
+  -  agi core | ai core | heat shielding | water resistant | soul encapsulation |
+  -  potato | plant based enhancements | 
+
+##technology 
+   - elven | plant | unknown
+
+##rankings
+   - efficiency
+   - armour
+   - health
+   - intelligence
 
 
 
