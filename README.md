@@ -1,4 +1,4 @@
-# ⚠️ No longer maintained, set to public for visibilty
+# ⚠️ No longer maintained (Repo set to 'Public' for Visibility)
 
 This is the bit_bots backend that creates and mints bit_bots.
 
