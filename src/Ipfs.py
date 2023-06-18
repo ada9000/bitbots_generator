@@ -20,14 +20,17 @@ class IpfsManager:
         )
 
 
+    # pin all ipfs
     def pin_from_file(self):
-        with open("./ipfs.txt", "r") as file:
+        with open("./src/ipfs.txt", "r") as file:
             ipfsHashes = file.readlines();
-
-
-
         for hash in ipfsHashes:
-            hash;
+            print(f"'{hash.strip()}'")
+            try:
+                self.ipfs.pin_object(hash.strip())
+            except ApiError as e:
+                print(f"ERROR! with hash '{hash.strip()}'")
+                print(e)
 
     
     def add(self, file_path: str):
