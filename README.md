@@ -1,69 +1,10 @@
 # ⚠️ No longer maintained (Repo set to 'Public' for Visibility)
 
-This is the bit_bots backend that creates and mints bit_bots.
+This is the bit_bots backend that creates and mints bit_bots. On Cardano. Dependent on the [BlockFrost](blockfrost.io) service.
 
-# todo
+**Yes there is an exposed api key in the git history, I've since migrated from that key**
 
-- [x] mouths should be mouths
-- [ ] merge background colour with planets in effects
-- [x] if bg is planet effect is none
-- [x] IPFS (I guess -\_-)
-- [x] Ensure correct release i.e input is no longer called input v3
-- [x] Fix id position again
-- [x] if moon remove bg
-- [x] sort out bg colour
-- [ ] emoji tags? lol
-
-- [x] ensure replace \_ with space in nft traits etc
-- [ ] special random strings that are traits...
-
-- [ ] enchantments 0x | defense set, circuit protection, enchanted surface,
-- [ ] enchantments 0x | offense set
-- [ ] bit-flipped option
-
-## enchantments
-
-- big brain? | gm? / ngmi? | elven armour | solar | wind |
-- agi core | ai core | heat shielding | water resistant | soul encapsulation |
-- potato | plant based enhancements |
-
-## technology
-
-- elven | plant | unknown
-
-## rankings
-
-- efficiency
-- armour
-- health
-- intelligence
-
-<g>
-id="identification "
-transform="translate(220,0)"
-
-[x] Generate a nft set, with the correct payloads and metadata
-[x] Export svg option
-[x] Use a database to store state
-[x] Working minting function
-[x] Database integration
-[x] Customer search job
-[x] Mint job
-[] Change all python files to use there own logger with it's own file? and check it works, remove ascii colours as it's too noisy
-
-[] Api call to get all payload data...
-[] Api call to get all meta (could only do 721 to save data)
-
-[] Graceful stop method, finishes all tasks then returns
-
-[] Test multiple async buys
-[] 10 wallets buy every 20 seconds
-[] each wallet reports it's last action
-[] check wallet action against db to confirm success
-[] Test killing app half way through
-[] Add logs to db for minting
-
-# launch checklist
+# 🚀 Launch checklist
 
 Ensure there are no duplicate nfts by running
 `SELECT uid FROM nft_status GROUP BY uid HAVING COUNT(uid) > 1`
@@ -123,17 +64,61 @@ Start api
 
 ### Bitbots.py
 
+Creates bit_bots from a defined input folder.
+
+- Create each NFT
+- Ensure all data is split into payloads and references. Keeping all data on chain, bypassing the 16kb limit.
+
 ### app.py
+
+Flask API. Simple BE for bit_bots.art. I.e keep prices and payment address correct.
 
 ### BlockFrostTools.py
 
+BlockFrost API wrapper, used to lookup the sender of a given tx to allow nft minting to the correct address.
+
 ### CardanoComms.py
+
+Communication with native cardano cli. Basically a Python wrapper for cardano-cli.
 
 ### Nft.py
 
+Creates the NFT metadata. Makes the metadata pretty but also appends payloads to ensure it's fully on chain.
+
 ### Utility.py
 
+Utility functions for JSON and converting ada values between ada and lace.
+
+### DBComms.py
+
+MySQL database wrapper. Creates two basic tables.
+
+- One table for global state
+- Another table for all information needed to track nft minting progress and recover if needed.
+
 ### Wallet.py
+
+Handle wallet generation and actions such as sending ada.
+
+### MintManager.py
+
+Runs two treads
+
+```python
+  customer_job_t = Thread(target=self.customer_job, args=())
+  mint_job_t = Thread(target=self.mint_job, args=())
+```
+
+- Customer job that checks for new customers
+- Mint job that mints to known customers
+
+### TestSet.py
+
+Simple script to test generation
+
+#### MintTask.py
+
+A simple script for testing the minting task
 
 ## Issues and notes
 
