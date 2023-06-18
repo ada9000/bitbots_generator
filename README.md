@@ -2,14 +2,15 @@
 
 This is the bit_bots backend that creates and mints bit_bots. On Cardano. Dependent on the [BlockFrost](blockfrost.io) service.
 
-**Yes there is an exposed api key in the git history, I've since migrated from that key**
+**Yes there is an exposed api key in the git history, I've since migrated from that key.**
 
 # 🚀 Launch checklist
 
 Ensure there are no duplicate nfts by running
 `SELECT uid FROM nft_status GROUP BY uid HAVING COUNT(uid) > 1`
 
-# Setup sql
+
+## Setup sql
 
 Setup mysql
 
@@ -33,7 +34,7 @@ exit
 Note db lives at
 /var/lib/mysql/<DB_NAME>
 
-## backup sql
+## Backup sql
 
 backup using mysqldump
 
@@ -52,7 +53,7 @@ sudo mysql NEW_DB_NAME < BACKUP.sql
 Start api
 `flask run --host=<IP> --port=<PORT>`
 
-## status
+## Status
 
 - Add owner to status
 - Add hash to status
@@ -60,7 +61,7 @@ Start api
   - Check for hash
   - Use API to look for existence of hash or query the whole policy for the nft
 
-## Files
+# 🧐 Files
 
 ### Bitbots.py
 
@@ -120,7 +121,7 @@ Simple script to test generation
 
 A simple script for testing the minting task
 
-## Issues and notes
+# ⚠️ Issues and notes
 
 - Notice a txoutput to small when using 3 ada? for hash 89a4466c5a6aca862e33daf6fe13705aa01c01af18ecb091f659880a1978b24e
 - Remove colour from unique id hex
