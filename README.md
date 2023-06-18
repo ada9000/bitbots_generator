@@ -114,7 +114,7 @@ Handle wallet generation and actions such as sending ada.
 
 ### MintManager.py
 
-Runs two treads
+Runs two treads:
 
 ```python
   customer_job_t = Thread(target=self.customer_job, args=())
@@ -126,11 +126,11 @@ Runs two treads
 
 ### TestSet.py
 
-Simple script to test generation
+Simple script to test generation,
 
 ### MintTask.py
 
-A simple script for testing the minting task
+A simple script for testing the minting task.
 
 # ⚠️ Issues and notes
 
