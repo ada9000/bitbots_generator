@@ -4,11 +4,22 @@ This is the bit_bots backend that creates and mints bit_bots. On Cardano. Depend
 
 **Yes there is an exposed api key in the git history, I've since migrated from that key.**
 
+- [Bitbots.py](#bitbotspy)
+- [app.py](#apppy)
+- [BlockFrostTools.py](#blockfrosttoolspy)
+- [CardanoComms.py](#cardanocommspy)
+- [Nft.py](#nftpy)
+- [Utility.py](#utilitypy)
+- [DBComms.py](#dbcommspy)
+- [Wallet.py](#walletpy)
+- [MintManager.py](#mintmanagerpy)
+- [TestSet.py](#testsetpy)
+- [MintTask.py](#minttaskpy)
+
 # 🚀 Launch checklist
 
 Ensure there are no duplicate nfts by running
 `SELECT uid FROM nft_status GROUP BY uid HAVING COUNT(uid) > 1`
-
 
 ## Setup sql
 
@@ -117,7 +128,7 @@ Runs two treads
 
 Simple script to test generation
 
-#### MintTask.py
+### MintTask.py
 
 A simple script for testing the minting task
 
